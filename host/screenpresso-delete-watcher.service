@@ -1,0 +1,13 @@
+[Unit]
+Description=screenpresso-localsend delete-marker watcher
+After=screenpresso-receiver.service
+
+[Service]
+Type=simple
+Environment=CONFIG_ENV=%h/screenpresso-localsend/host/config.env
+ExecStart=%h/screenpresso-localsend/host/delete-watcher.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,11 @@
+# Local configuration (contains host/IP and PIN)
+sender/config.json
+host/config.env
+
+# Local runtime state / logs
+*.log
+state.json
+
+# OS cruft
+Thumbs.db
+.DS_Store

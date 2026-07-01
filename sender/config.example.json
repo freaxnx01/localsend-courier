@@ -1,0 +1,15 @@
+{
+  "host": "192.168.1.50",
+  "pin": "",
+  "https": true,
+  "watchFolder": "",
+  "fileExtensions": [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".mp4"],
+  "clipboard": "name",
+  "localSendCli": "localsend-cli",
+  "deleteMarkerSuffix": ".localsend-delete",
+  "pollIntervalSeconds": 2,
+  "stabilizeSeconds": 1.5,
+  "sendExistingOnStartup": false,
+  "stateFile": "",
+  "logFile": ""
+}
