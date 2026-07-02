@@ -14,8 +14,9 @@ clipboard, and mirror local deletions to the receiving host.
 The LocalSend protocol is **send-only** — there is no official CLI (upstream
 [issue #11](https://github.com/localsend/localsend/issues/11) is still open) and
 no way to tell a peer *"delete file X"*. Both the sender and the daemon in this
-project shell out to the third-party Go CLI
-[`0w0mewo/localsend-cli`](https://github.com/0w0mewo/localsend-cli).
+project shell out to the third-party CLI
+[`aduggleby/localsend-cli`](https://github.com/aduggleby/localsend-cli) — a Rust
+tool built for non-interactive automation (verified against v0.9.2).
 
 To get delete-on-host we ride the same transport: when you delete a screenshot
 locally, the sender transmits a tiny **delete marker** file named
@@ -46,16 +47,12 @@ Screenpresso  ──new file──►  Send-Screenpresso.ps1  ──localsend─
 
 ### 1. Install the LocalSend CLI
 
-On **both** machines. With Go 1.21+ installed:
+On **both** machines. Download a prebuilt binary from the CLI's
+[releases page](https://github.com/aduggleby/localsend-cli/releases), or build
+from source with `cargo install --git https://github.com/aduggleby/localsend-cli localsend-cli`.
 
-```sh
-go install github.com/0w0mewo/localsend-cli@latest
-```
-
-The binary lands in `$(go env GOPATH)/bin` (`%USERPROFILE%\go\bin` on Windows).
-Add that to `PATH`, or point `localSendCli` in the config at the full path.
-Prebuilt binaries are also on the CLI's
-[releases page](https://github.com/0w0mewo/localsend-cli/releases).
+Put `localsend-cli` on `PATH`, or point `localSendCli` (sender) / `LOCALSEND_CLI`
+(host) at the full path. On Windows, `sender/Get-LocalSendCli.ps1` automates this.
 
 ### 2. Configure the sender (Windows)
 
@@ -92,7 +89,7 @@ sudo ./install.sh           # installs + enables both systemd services
 ```
 
 This starts:
-- `screenpresso-receiver.service` — `localsend-cli recv -d $INBOX`
+- `screenpresso-receiver.service` — `localsend-cli [--alias NAME] [--protocol http] receive --output $INBOX`
 - `screenpresso-delete-watcher.service` — mirrors deletions in `$INBOX`
 
 Without systemd you can run the two scripts directly:
@@ -109,6 +106,7 @@ Without systemd you can run the two scripts directly:
 | Key                    | Default                                   | Description |
 |------------------------|-------------------------------------------|-------------|
 | `host`                 | *(required)*                              | Target IP or hostname of the Linux box. |
+| `port`                 | `53317`                                   | LocalSend port on the host (sent via `--direct host:port`). |
 | `pin`                  | `""`                                      | LocalSend PIN, if the receiver requires one. |
 | `https`                | `true`                                    | Use HTTPS transport (must match the receiver). |
 | `watchFolder`          | `""` → `Pictures\Screenpresso`            | Folder to watch. Empty = Screenpresso default. |
@@ -130,7 +128,8 @@ Without systemd you can run the two scripts directly:
 | `MARKER_SUFFIX` | `.localsend-delete`             | Must match the sender's `deleteMarkerSuffix`. |
 | `PIN`           | *(empty)*                       | PIN required from senders. |
 | `HTTPS`         | `true`                          | Use HTTPS transport (must match the sender). |
-| `DEVICE_NAME`   | `screenpresso-host`             | Name advertised on the network. |
+| `DEVICE_NAME`   | `screenpresso-host`             | Name advertised on the network (maps to `--alias`). |
+| `PORT`          | *(empty → 53317)*               | Port to bind. Must match the sender's `port`. |
 
 ## How the sender works
 

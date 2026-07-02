@@ -26,7 +26,7 @@ uninstall() {
 # --- Preconditions ---
 command -v systemctl >/dev/null 2>&1 || { echo "systemd (systemctl) is required." >&2; exit 1; }
 command -v "${LOCALSEND_CLI:-localsend-cli}" >/dev/null 2>&1 || \
-    echo "WARNING: localsend-cli not on PATH. Install it: go install github.com/0w0mewo/localsend-cli@latest" >&2
+    echo "WARNING: localsend-cli not on PATH. Install aduggleby/localsend-cli (prebuilt binaries at https://github.com/aduggleby/localsend-cli/releases) and put it on PATH, or set LOCALSEND_CLI to its full path." >&2
 command -v inotifywait >/dev/null 2>&1 || \
     echo "WARNING: inotifywait not found. Install inotify-tools (e.g. apt install inotify-tools)." >&2
 

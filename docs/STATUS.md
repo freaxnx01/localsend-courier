@@ -12,9 +12,13 @@ the host. New **public** GitHub repo under **freaxnx01**.
 
 ## Decisions made
 - **LocalSend is send-only** — no official CLI, no remote-delete in the protocol.
-  Both sides shell out to the third-party Go CLI
-  [`0w0mewo/localsend-cli`](https://github.com/0w0mewo/localsend-cli)
-  (`send --ip/-f/-p/--https`, `recv -d <dir>`).
+  Both sides shell out to the third-party CLI
+  [`aduggleby/localsend-cli`](https://github.com/aduggleby/localsend-cli)
+  (Rust, v0.9.2, verified on the host). Grammar: globals `--alias/--protocol`
+  BEFORE the subcommand; `receive --output <dir> [--pin]`;
+  `send --to <label> --direct <host:port> --file <f> [--pin]`.
+  (Originally written against `0w0mewo/localsend-cli` with `recv -d` /
+  `send --ip/-f`; corrected 2026-07-02 to match the CLI actually deployed.)
 - **Remote delete** ridden over the same transport: on local delete the sender
   transmits a `<name>.localsend-delete` marker file; a Linux companion watcher
   deletes the matching received file. (User chose "host companion watcher".)
@@ -39,18 +43,16 @@ the host. New **public** GitHub repo under **freaxnx01**.
   files outside the inbox untouched. ✓
 - All 3 PowerShell scripts parse clean; all 3 bash scripts pass `bash -n`. ✓
 
-## Next step (the only blocker)
-Publish under **freaxnx01**. `gh` on this machine is authenticated only as
-`anim-bossinfo-ch`; there is no freaxnx01 token/`.envrc`. Once authenticated as
-freaxnx01:
+## Verified against the real CLI (2026-07-02)
+- On `srvdmsk8s01`: `localsend-cli` = **aduggleby/localsend-cli v0.9.2** at
+  `~/.local/bin/localsend-cli`; an existing `localsend-receiver.service` already
+  uses it. End-to-end loopback test passed with the corrected flags
+  (`send --to <label> --direct <ip:port> --file` → `receive --output`); the file
+  landed in the inbox under its basename (what the delete-watcher expects).
+- **`inotify-tools` is NOT installed** on the host — the delete-watcher needs
+  `inotifywait`. Install with `sudo apt install inotify-tools` before enabling
+  `screenpresso-delete-watcher.service`.
 
-```bash
-cd ~/repos/github/freaxnx01/public/screenpresso-localsend
-gh repo create freaxnx01/screenpresso-localsend --public --source . --remote origin --push \
-  --description "Auto-forward Screenpresso screenshots over LocalSend with clipboard + delete mirroring"
-```
-
-## Optional follow-ups
-- Confirm the installed `localsend-cli`'s exact `recv`/`send` flags on the real
-  Linux host against `host/config.env` and `receive.sh`.
-- Consider adding a `--name` device flag check (used in `receive.sh`).
+## Next step
+Repo is published at https://github.com/freaxnx01/screenpresso-localsend.
+Remaining host-side action: `sudo apt install inotify-tools` on the target box.

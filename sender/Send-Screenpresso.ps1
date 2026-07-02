@@ -36,6 +36,7 @@ $ErrorActionPreference = 'Stop'
 function Get-DefaultConfig {
     [pscustomobject]@{
         host                  = ''
+        port                  = 53317
         pin                   = ''
         https                 = $true
         watchFolder           = ''
@@ -151,7 +152,7 @@ function Assert-Cli {
     param([string]$Cli)
     $cmd = Get-Command $Cli -ErrorAction SilentlyContinue
     if (-not $cmd) {
-        throw "LocalSend CLI '$Cli' not found. Install it (go install github.com/0w0mewo/localsend-cli@latest) or set 'localSendCli' to its full path."
+        throw "LocalSend CLI '$Cli' not found. Install it (see Get-LocalSendCli.ps1 / aduggleby/localsend-cli releases) or set 'localSendCli' to its full path."
     }
     return $cmd.Source
 }
@@ -159,9 +160,15 @@ function Assert-Cli {
 function Send-ViaLocalSend {
     param([pscustomobject]$Cfg, [string]$FilePath)
 
-    $arguments = @('send', '--ip', $Cfg.host, '-f', $FilePath)
-    if (-not [string]::IsNullOrWhiteSpace($Cfg.pin)) { $arguments += @('-p', $Cfg.pin) }
-    if (-not $Cfg.https) { $arguments += '--https=false' }
+    # aduggleby/localsend-cli (v0.9.x) grammar: --protocol is a GLOBAL option and
+    # must precede the 'send' subcommand. We address the host explicitly with
+    # --direct <host:port> (skips flaky discovery); --to is still required as a
+    # display label, so we reuse the host string for it.
+    $port = if ($Cfg.PSObject.Properties.Match('port').Count -and $Cfg.port) { $Cfg.port } else { 53317 }
+    $globalArgs = @()
+    if (-not $Cfg.https) { $globalArgs += @('--protocol', 'http') }
+    $arguments = $globalArgs + @('send', '--to', $Cfg.host, '--direct', "$($Cfg.host):$port", '--file', $FilePath)
+    if (-not [string]::IsNullOrWhiteSpace($Cfg.pin)) { $arguments += @('--pin', $Cfg.pin) }
 
     $output = & $Cfg.localSendCli @arguments 2>&1
     if ($LASTEXITCODE -ne 0) {
@@ -275,7 +282,7 @@ $cliPath = Assert-Cli -Cli $cfg.localSendCli
 
 Write-Log "screenpresso-localsend sender starting"
 Write-Log "  watch folder : $($cfg.watchFolder)"
-Write-Log "  target host  : $($cfg.host) (https=$($cfg.https), pin=$([bool]$cfg.pin))"
+Write-Log "  target host  : $($cfg.host):$($cfg.port) (https=$($cfg.https), pin=$([bool]$cfg.pin))"
 Write-Log "  cli          : $cliPath"
 Write-Log "  state file   : $($cfg.stateFile)"
 
