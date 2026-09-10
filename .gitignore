@@ -10,5 +10,10 @@ state.json
 Thumbs.db
 .DS_Store
 
-# Local session/handoff state
-.claude/
+# Local session/handoff state — ignore contents (NOT the dir itself, or the
+# negation below cannot re-include: git never descends into an ignored directory)
+.claude/*
+# ...but per-branch handoffs are durable and meant to be committed
+!.claude/handoff-*.md
+# the index is derived from those, never committed
+.claude/handoffs.md
