@@ -1,8 +1,9 @@
 # screenpresso-localsend — Status & Handoff
 
-**Repo (local):** `~/repos/github/freaxnx01/public/screenpresso-localsend`
-**Branch:** `main` — committed (1 commit, 13 files). **Not yet pushed to GitHub.**
-**Date:** 2026-07-01
+**Repo:** https://github.com/freaxnx01/screenpresso-localsend (public)
+**Local:** `~/repos/github/freaxnx01/public/screenpresso-localsend`
+**Branch:** `main` — in sync with `origin/main`.
+**Date:** 2026-09-21 (host bring-up completed)
 
 ## Goal
 A tool for Win11 (pwsh) that watches the Screenpresso capture folder
@@ -31,7 +32,7 @@ the host. New **public** GitHub repo under **freaxnx01**.
 - `sender/Send-Screenpresso.ps1` — watcher/sender (send + clipboard + delete markers).
 - `sender/Install-Sender.ps1` — hidden per-user scheduled task at logon (+ `-Unregister`).
 - `sender/Get-LocalSendCli.ps1`, `sender/config.example.json`.
-- `host/receive.sh` — headless `recv -d $INBOX` loop.
+- `host/receive.sh` — headless `receive --output $INBOX` loop (aduggleby grammar).
 - `host/delete-watcher.sh` — inotify watcher, applies markers, path-traversal guard.
 - `host/install.sh` + two systemd unit files + `config.env.example`.
 - `README.md`, MIT `LICENSE`, `.gitignore` (excludes real `config.json`/`config.env`).
@@ -53,6 +54,59 @@ the host. New **public** GitHub repo under **freaxnx01**.
   `inotifywait`. Install with `sudo apt install inotify-tools` before enabling
   `screenpresso-delete-watcher.service`.
 
-## Next step
-Repo is published at https://github.com/freaxnx01/screenpresso-localsend.
-Remaining host-side action: `sudo apt install inotify-tools` on the target box.
+## Host bring-up — DONE (2026-09-21, `srvdmsk8s01`)
+
+The host side is live. Resolution of the old port conflict: **option (b)** — we do
+*not* run our own receiver. The box already runs **localgo** (`bethropolis/localgo`,
+LocalSend v2.1) as a lingering *user* service on `53317` with `--auto-accept`,
+downloading into `/home/admin/localsend-inbox`. Standing up a second receiver on a
+second port would have duplicated a working service for no gain, so only the
+delete-watcher was installed, pointed at localgo's inbox.
+
+- `inotify-tools` 4.23.9.0 installed (`apt`).
+- `host/config.env` written on the host: `INBOX=/home/admin/localsend-inbox`,
+  `PORT=53317`, `DEVICE_NAME=CC-CLI`, `LOCALSEND_CLI=/home/admin/.local/bin/localsend-cli`.
+- `screenpresso-delete-watcher.service` rendered by hand into
+  `~/.config/systemd/user/` (`After=/Wants=localgo.service` instead of
+  `screenpresso-receiver.service`), enabled + started, linger on. `install.sh` was
+  **not** used — it installs both units unconditionally.
+- `screenpresso-receiver.service` is deliberately **not** installed.
+
+### Verified live on the host
+- Marker round-trip over the wire: `localsend-cli send --to CC-CLI --direct
+  127.0.0.1:53317 --file pair-test.png` → lands in the inbox → sending
+  `pair-test.png.localsend-delete` the same way → watcher removes **both**.
+- Path-traversal guard: a marker named `..%2Ftraversal-sentinel.txt.localsend-delete`
+  was treated as a literal filename; the sentinel outside the inbox survived and the
+  marker was cleaned up.
+- The sender script's exact flag grammar (`send --to <name> --direct <host:port>
+  --file <path>`) is confirmed correct against **aduggleby/localsend-cli 0.9.2**
+  talking to localgo.
+
+## Open items
+
+0. **BLOCKER — cannot push.** This STATUS commit is made locally but **not on
+   GitHub**. Both the Windows dev box and `srvdmsk8s01` authenticate as
+   `anim-bossinfo-ch`, which has only `pull` on `freaxnx01/screenpresso-localsend`
+   (`gh api repos/freaxnx01/screenpresso-localsend --jq .permissions` →
+   `push: false`). The commit exists on `main` in **both** working copies, one
+   ahead of `origin/main` (`e32c284`). Fix by switching `gh` to the `freaxnx01`
+   account or granting `anim-bossinfo-ch` write, then `git push origin main` from
+   either box.
+1. **Windows sender is not installed anywhere we can see.** The dev box
+   (`C--Develop-GitHubRepos-...`) has **no Screenpresso** and **no scheduled task**,
+   so the screenshot→send leg could not be exercised from there. Whichever machine
+   produced `2026-07-03_15h42_35.png` in the inbox is the real sender host; the
+   sender still needs installing/verifying on it.
+2. **CLI confusion on the dev box.** `%LOCALAPPDATA%\Programs\localsend-cli\localsend.exe`
+   is **v0.0.7 of a different project** (`send/recv/scan`, `--ip`), not
+   aduggleby/localsend-cli 0.9.x (`--protocol`, `send --to --direct --file`) which
+   `Send-Screenpresso.ps1` targets. It cannot talk to localgo at all — `PreUpload
+   Fingerprint mismatch` over https, `Invalid body` over http, and `scan` finds
+   nothing (different subnet). Use `sender/Get-LocalSendCli.ps1` to fetch the right
+   binary on the sender machine, and consider having the sender script assert the
+   CLI's identity/version up front instead of failing mid-transfer.
+3. **README** has no "coexisting with an existing LocalSend receiver" section, which
+   is now the deployed topology. Worth documenting.
+4. **Optional:** poll-based fallback in `delete-watcher.sh` to drop the
+   inotify-tools dependency.
