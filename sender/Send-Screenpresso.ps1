@@ -154,7 +154,36 @@ function Assert-Cli {
     if (-not $cmd) {
         throw "LocalSend CLI '$Cli' not found. Install it (see Get-LocalSendCli.ps1 / aduggleby/localsend-cli releases) or set 'localSendCli' to its full path."
     }
-    return $cmd.Source
+    $path = $cmd.Source
+
+    # A different project ships a binary with the same name (reports v0.0.7,
+    # flags --ip/--dapi, no --to/--direct/--protocol). It only fails once a
+    # transfer is under way ("Fingerprint mismatch" / "Invalid body"), so probe
+    # it here, once at startup, rather than mid-send.
+    $verOut = ''
+    $helpOut = ''
+    try {
+        $verOut  = (& $path '--version' 2>&1 | Out-String).Trim()
+        $helpOut = (& $path 'send' '--help' 2>&1 | Out-String)
+    } catch {
+        Write-Log "Could not probe '$path' ($($_.Exception.Message)); skipping CLI identity check." 'WARN'
+        return $path
+    }
+
+    # Prefer the grammar over the version string: any build that knows
+    # --to/--direct speaks the dialect Send-ViaLocalSend emits.
+    $hasGrammar = ($helpOut -match '--direct') -and ($helpOut -match '--to\b')
+    $ver = $null
+    if ($verOut -match '(\d+\.\d+)') { $ver = [version]$Matches[1] }
+    if ($hasGrammar -or ($ver -and $ver -ge [version]'0.9')) { return $path }
+
+    if ($ver -or ($helpOut -match '--dapi|--ip\b')) {
+        $what = if ($verOut) { $verOut } else { ($helpOut -split "`r?`n" | Where-Object { $_.Trim() } | Select-Object -First 1) }
+        throw "LocalSend CLI '$path' reports '$what' - that is not aduggleby/localsend-cli 0.9.x (no --to/--direct/--protocol grammar; transfers would fail mid-send). Run sender\Get-LocalSendCli.ps1 to fetch the right binary, or set 'localSendCli' in config.json to its full path."
+    }
+
+    Write-Log "Could not identify the LocalSend CLI at '$path' (unrecognised --version/--help output); continuing anyway." 'WARN'
+    return $path
 }
 
 function Send-ViaLocalSend {
