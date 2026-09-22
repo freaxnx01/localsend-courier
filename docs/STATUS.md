@@ -98,15 +98,22 @@ delete-watcher was installed, pointed at localgo's inbox.
    so the screenshot→send leg could not be exercised from there. Whichever machine
    produced `2026-07-03_15h42_35.png` in the inbox is the real sender host; the
    sender still needs installing/verifying on it.
-2. **CLI confusion on the dev box.** `%LOCALAPPDATA%\Programs\localsend-cli\localsend.exe`
+2. **DONE (2026-09-22, commit `29e1e8a`).** ~~CLI confusion on the dev box.~~ `%LOCALAPPDATA%\Programs\localsend-cli\localsend.exe`
    is **v0.0.7 of a different project** (`send/recv/scan`, `--ip`), not
    aduggleby/localsend-cli 0.9.x (`--protocol`, `send --to --direct --file`) which
    `Send-Screenpresso.ps1` targets. It cannot talk to localgo at all — `PreUpload
    Fingerprint mismatch` over https, `Invalid body` over http, and `scan` finds
-   nothing (different subnet). Use `sender/Get-LocalSendCli.ps1` to fetch the right
-   binary on the sender machine, and consider having the sender script assert the
-   CLI's identity/version up front instead of failing mid-transfer.
-3. **README** has no "coexisting with an existing LocalSend receiver" section, which
-   is now the deployed topology. Worth documenting.
+   nothing (different subnet). `Assert-Cli` now probes the binary once at startup
+   and throws with a pointer to `Get-LocalSendCli.ps1`; accepts the grammar
+   (`--to`/`--direct`) or a parsed version >= 0.9. Verified live against the real
+   v0.0.7 binary. The dev box still has the wrong binary installed — replacing it
+   only matters on the actual sender machine (item 1).
+3. **DONE (2026-09-22, commit `4a6c5bd`).** README now has a "Running alongside an
+   existing LocalSend receiver" section describing the deployed topology.
 4. **Optional:** poll-based fallback in `delete-watcher.sh` to drop the
    inotify-tools dependency.
+5. **NEW — found 2026-09-22, not acted on.** README Quick start step 3 says
+   `sudo ./install.sh`, but `install.sh` is a `systemd --user` installer
+   (`systemctl --user`, `loginctl enable-linger "$USER"`). Under `sudo` it would
+   target **root's** user manager, not the invoking user's. The `sudo` should
+   almost certainly be dropped. One-line fix, deliberately left for a decision.
