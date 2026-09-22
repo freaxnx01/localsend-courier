@@ -85,7 +85,7 @@ pwsh -NoProfile -File .\Install-Sender.ps1 -ConfigPath .\config.json
 cd host
 cp config.env.example config.env
 $EDITOR config.env          # set INBOX, PIN, HTTPS to match the sender
-sudo ./install.sh           # installs + enables both systemd services
+./install.sh                # installs + enables both systemd --user services
 ```
 
 This starts:

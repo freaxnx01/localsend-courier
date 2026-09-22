@@ -112,8 +112,8 @@ delete-watcher was installed, pointed at localgo's inbox.
    existing LocalSend receiver" section describing the deployed topology.
 4. **Optional:** poll-based fallback in `delete-watcher.sh` to drop the
    inotify-tools dependency.
-5. **NEW — found 2026-09-22, not acted on.** README Quick start step 3 says
-   `sudo ./install.sh`, but `install.sh` is a `systemd --user` installer
-   (`systemctl --user`, `loginctl enable-linger "$USER"`). Under `sudo` it would
-   target **root's** user manager, not the invoking user's. The `sudo` should
-   almost certainly be dropped. One-line fix, deliberately left for a decision.
+5. **DONE (2026-09-22).** ~~README Quick start step 3 said `sudo ./install.sh`~~ —
+   `install.sh` is a `systemd --user` installer (`systemctl --user`,
+   `loginctl enable-linger "$USER"`), so under `sudo` it would have targeted
+   **root's** user manager. The `sudo` is gone and the inline comment now says
+   "systemd --user services" so the reason is visible at the call site.
