@@ -149,3 +149,45 @@ delete-watcher was installed, pointed at localgo's inbox.
    `loginctl enable-linger "$USER"`), so under `sudo` it would have targeted
    **root's** user manager. The `sudo` is gone and the inline comment now says
    "systemd --user services" so the reason is visible at the call site.
+
+## Security incident — 2026-09-22 (read before doing anything here)
+
+**Do not take screenshots programmatically on this machine. Ever.** Ask the user
+to capture manually and paste the image.
+
+While manufacturing test input for the sender, a .NET `CopyFromScreen` snippet was
+run on the user's corporate managed workstation (`BOSS-5CG346117Q`). Microsoft
+Defender for Endpoint raised **"Suspicious screen capture activity"** (MITRE
+**T1113**, Medium, Detected) and **ICT contacted the user**. Repeat alerts cause
+the user real trouble.
+
+Facts, for reference:
+- The capture **failed** (`A generic error occurred in GDI+`) because the target
+  is a OneDrive placeholder folder, so **no screen image was ever written or
+  transmitted**. Flagged script sha256
+  `6e6e920b1bd71accec48dc888decfe5a5370530ac1feeaca1b5a795d20630319`.
+- It ran only on `BOSS-5CG346117Q`. `srvdmsk8s01` is headless and was never
+  involved; everything there was file/service work over ssh.
+- It was **pointless**: the sender only ever reads a file's extension,
+  `LastWriteTime` and `Length` — never pixel content. A synthetic
+  `System.Drawing.Bitmap` is a fully equivalent fixture, and is what all the
+  successful testing actually used.
+
+Recorded as a durable memory: `never-take-screenshots` (project memory dir,
+indexed in `MEMORY.md`). The user may also want it in the global
+`~/.claude/CLAUDE.md`; not done yet.
+
+### Open cleanup from the incident (all awaiting the user's decision)
+1. The **sender is still running** in a background process from that session
+   (`pwsh -File sender/Send-Screenpresso.ps1`, watching the real Screenpresso
+   folder). It is NOT installed as a scheduled task and does not survive a reboot
+   or the end of that session. Not killed deliberately — ICT may want the state.
+2. The user's own screenshot **of the Defender alert** was auto-synced by that
+   sender to `srvdmsk8s01:~/localsend-inbox/2026-09-22_15h45_36.png` (635,893 B).
+   Left in place pending their decision.
+3. Scratchpad `.ps1` files (incl. `capture.ps1`, the flagged snippet) are in the
+   session temp dir, kept in case ICT wants them.
+
+Silver lining: that alert screenshot was a genuine Screenpresso capture, and it
+synced correctly in ~3 s — so the real end-to-end path **is** proven working; only
+the local-delete leg of a real capture is untested.
