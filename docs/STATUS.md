@@ -93,11 +93,43 @@ delete-watcher was installed, pointed at localgo's inbox.
    ahead of `origin/main` (`e32c284`). Fix by switching `gh` to the `freaxnx01`
    account or granting `anim-bossinfo-ch` write, then `git push origin main` from
    either box.
-1. **Windows sender is not installed anywhere we can see.** The dev box
-   (`C--Develop-GitHubRepos-...`) has **no Screenpresso** and **no scheduled task**,
-   so the screenshot→send leg could not be exercised from there. Whichever machine
-   produced `2026-07-03_15h42_35.png` in the inbox is the real sender host; the
-   sender still needs installing/verifying on it.
+1. **CORRECTED + mostly DONE (2026-09-22).** ~~Windows sender is not installed
+   anywhere we can see.~~ That was wrong: **Screenpresso IS installed and running
+   on this dev box** (`%LOCALAPPDATA%\Learnpulse\Screenpresso\Screenpresso.exe`).
+   The earlier check missed it because it only looked at `%USERPROFILE%\Pictures`;
+   the real capture folder is OneDrive-redirected **and localized**:
+   `%USERPROFILE%\OneDrive - bossinfo.ch AG\Bilder\Screenpresso`, which is what
+   `[Environment]::GetFolderPath('MyPictures')` correctly returns.
+
+   **Win11 -> srvdmsk8s01 sync is verified end-to-end (2026-09-22):**
+   - aduggleby/localsend-cli **0.9.2** for Windows installed to
+     `%LOCALAPPDATA%\Programs\localsend-cli-aduggleby\localsend-cli.exe`
+     (deliberately NOT over the pre-existing wrong v0.0.7 binary in
+     `...\Programs\localsend-cli\localsend.exe`, which is left untouched).
+     `Get-LocalSendCli.ps1` does not download anything — it only prints the
+     releases URL or builds via cargo — so the binary was fetched manually.
+   - `sender/config.json` created (gitignored): host `10.240.10.83`, port 53317,
+     https, `localSendCli` set to the full path above. **Use forward slashes** in
+     that JSON — backslashes need doubling and are easy to get wrong.
+   - TCP to `10.240.10.83:53317` works; the boxes are on different subnets
+     (Windows `10.100.120.2`), so LocalSend **discovery/`scan` cannot work** and
+     `--direct` is mandatory. `--to <IP>` is fine — the alias is only a label.
+   - The new `Assert-Cli` guard **accepts** 0.9.2 silently and **rejects** the
+     v0.0.7 binary, both confirmed by running it.
+   - Full round trip against a local test folder: file appears -> sent in ~5 s ->
+     lands in `~/localsend-inbox` as a valid 640x360 PNG -> filename on the
+     clipboard -> deleted locally -> gone from the host in ~6 s, no stray markers.
+
+   **Still outstanding:** a capture made by Screenpresso itself has not been
+   exercised, because the capture folder is a **OneDrive Files On-Demand cloud
+   placeholder** (reparse tag `0x9000e01a`) and a non-interactive shell cannot
+   create files in it — every write fails with `ENOENT` / "A generic error
+   occurred in GDI+". Screenpresso, running interactively, writes there fine, so
+   this is a limitation of the agent's shell, not of the tool. The sender is
+   currently running and pointed at that folder; the remaining test is for a human
+   to press the Screenpresso hotkey and confirm the capture syncs and then
+   un-syncs on delete. Installing the logon scheduled task
+   (`sender/Install-Sender.ps1`) is also still to do.
 2. **DONE (2026-09-22, commit `29e1e8a`).** ~~CLI confusion on the dev box.~~ `%LOCALAPPDATA%\Programs\localsend-cli\localsend.exe`
    is **v0.0.7 of a different project** (`send/recv/scan`, `--ip`), not
    aduggleby/localsend-cli 0.9.x (`--protocol`, `send --to --direct --file`) which
