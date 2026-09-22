@@ -131,6 +131,69 @@ Without systemd you can run the two scripts directly:
 | `DEVICE_NAME`   | `screenpresso-host`             | Name advertised on the network (maps to `--alias`). |
 | `PORT`          | *(empty → 53317)*               | Port to bind. Must match the sender's `port`. |
 
+## Running alongside an existing LocalSend receiver
+
+If the Linux box already runs a LocalSend receiver — e.g.
+[`bethropolis/localgo`](https://github.com/bethropolis/localgo) as a
+`systemd --user` service — there is no reason to start a second one. Skip
+`screenpresso-receiver.service` entirely and install **only the delete
+watcher**, pointed at the receiver you already have.
+
+Point `host/config.env` at the existing receiver's settings instead of your own:
+
+```sh
+INBOX=/home/admin/localsend-inbox   # the receiver's download directory
+MARKER_SUFFIX=".localsend-delete"   # must match the sender's deleteMarkerSuffix
+DEVICE_NAME="CC-CLI"                # must match the receiver's advertised alias
+PORT="53317"
+HTTPS="true"
+```
+
+Two values have to line up or nothing arrives:
+
+- `DEVICE_NAME` — the alias the existing receiver advertises (for localgo,
+  `LOCALSEND_ALIAS` in `~/.config/localgo/localgo.env`). The sender addresses
+  the host by that alias: `localsend-cli send --to CC-CLI --direct <host>:53317 …`.
+- `MARKER_SUFFIX` — must match the sender's `deleteMarkerSuffix` (see
+  [Configuration](#configuration)); otherwise markers just pile up in the inbox.
+
+`install.sh` installs **both** units unconditionally, so don't run it here —
+write the watcher unit yourself and order it after the receiver you actually
+have:
+
+```ini
+# ~/.config/systemd/user/screenpresso-delete-watcher.service
+[Unit]
+Description=screenpresso-localsend delete-marker watcher
+After=localgo.service
+Wants=localgo.service
+
+[Service]
+Type=simple
+Environment=CONFIG_ENV=%h/screenpresso-localsend/host/config.env
+ExecStart=%h/screenpresso-localsend/host/delete-watcher.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
+```
+
+```sh
+systemctl --user daemon-reload
+systemctl --user enable --now screenpresso-delete-watcher.service
+loginctl enable-linger "$USER"   # keep it running without an active login
+```
+
+To verify, send a file and then its marker from the sender machine:
+
+```sh
+localsend-cli send --to CC-CLI --direct <host>:53317 --file shot.png
+localsend-cli send --to CC-CLI --direct <host>:53317 --file shot.png.localsend-delete
+```
+
+The first lands in `$INBOX`; the second makes the watcher remove both.
+
 ## How the sender works
 
 A poll loop (default every 2 s) reconciles the watch folder against a small JSON
