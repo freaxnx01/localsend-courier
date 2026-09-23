@@ -19,6 +19,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   capture folder rejects file creation by anything but the capturing app.
 - `INSTALL.md` — prerequisites per side, install, configuration, verification and
   troubleshooting for setting the tool up on new machines.
+- `CHEATSHEET.md` — keyboard shortcuts, paths, client and host commands, how to
+  read the log, and quick checks.
 - `PROJECT-OVERVIEW.md` — purpose, architecture and what is deliberately out of
   scope.
 - `.log` added to the default `fileExtensions`.
