@@ -10,8 +10,10 @@ clipboard, and mirror local deletions to the receiving host.
   companion watcher that mirrors deletions.
 
 Setting this up on new machines: **[INSTALL.md](INSTALL.md)** — prerequisites per
-side, install, configuration, verification and troubleshooting. What the tool is
-for and what it deliberately does not do: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
+side, install, configuration, verification and troubleshooting. Day-to-day
+shortcuts, paths and commands: **[CHEATSHEET.md](CHEATSHEET.md)**. What the tool
+is for and what it deliberately does not do:
+[PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
 
 ## Why a companion watcher?
 
