@@ -128,16 +128,24 @@ delete-watcher was installed, pointed at localgo's inbox.
      lands in `~/localsend-inbox` as a valid 640x360 PNG -> filename on the
      clipboard -> deleted locally -> gone from the host in ~6 s, no stray markers.
 
-   **Still outstanding:** a capture made by Screenpresso itself has not been
-   exercised, because the capture folder is a **OneDrive Files On-Demand cloud
-   placeholder** (reparse tag `0x9000e01a`) and a non-interactive shell cannot
-   create files in it — every write fails with `ENOENT` / "A generic error
-   occurred in GDI+". Screenpresso, running interactively, writes there fine, so
-   this is a limitation of the agent's shell, not of the tool. The sender is
-   currently running and pointed at that folder; the remaining test is for a human
-   to press the Screenpresso hotkey and confirm the capture syncs and then
-   un-syncs on delete. Installing the logon scheduled task
-   (`sender/Install-Sender.ps1`) is also still to do.
+   **CLOSED (2026-09-23) — full round trip with a real capture verified.** With
+   the sender running against the real capture folder, a Screenpresso capture
+   (`2026-09-23_11h07_37.png`, 20.4 KB) was sent at 11:07:39 and was on the host
+   at 11:07 as a valid 234x114 RGBA PNG (20,900 B) — under 2 s — with the
+   filename on the clipboard. Deleting it locally was detected at 11:11:57 and
+   the watcher logged `deleted 2026-09-23_11h07_37.png` at 11:11:56, leaving no
+   marker behind. The startup reconcile also fired on two stale state entries
+   from the 2026-09-22 session and correctly removed `2026-09-22_16h10_51.png`
+   on the host.
+
+   A non-interactive shell still cannot create files in the capture folder
+   (OneDrive Files On-Demand placeholder, reparse tag `0x9000e01a`; writes fail
+   with `ENOENT`), so this leg can only ever be exercised by a human — it is not
+   automatable and should not be attempted again from a shell.
+
+   Installing the logon scheduled task (`sender/Install-Sender.ps1`) is still
+   **deferred** by the user; the sender runs only when started by hand.
+
 2. **DONE (2026-09-22, commit `29e1e8a`).** ~~CLI confusion on the dev box.~~ `%LOCALAPPDATA%\Programs\localsend-cli\localsend.exe`
    is **v0.0.7 of a different project** (`send/recv/scan`, `--ip`), not
    aduggleby/localsend-cli 0.9.x (`--protocol`, `send --to --direct --file`) which
