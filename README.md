@@ -226,10 +226,15 @@ path back on the clipboard:
 | Save, host path back    | `Ctrl+Shift+J` | Same file, clipboard gets `<hostInbox>/<name>` — the path it will have on the host. |
 | Open the folder         | `Ctrl+Shift+O` | Opens the folder in Explorer. |
 
-Because the file is written into the watched folder, it is sent and
-delete-mirrored like any capture — so a console dump reaches the host the same way
-a screenshot does. Add `.log` to `fileExtensions` or it will be written but never
-sent.
+Dumps are written to their own folder (`%LOCALAPPDATA%\screenpresso-localsend\clips`
+by default), which the sender watches **in addition to** the capture folder — so a
+console dump is sent and delete-mirrored exactly like a screenshot. Add `.log` to
+`fileExtensions` or it will be written but never sent.
+
+They deliberately do *not* go into the capture folder: a OneDrive **Files
+On-Demand** folder accepts writes from the capturing application but rejects file
+creation by other processes — every create fails with `Could not find file`. Point
+`folder` at the capture folder only if you know it is a plain local directory.
 
 Details worth knowing:
 

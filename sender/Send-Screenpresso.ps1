@@ -51,7 +51,7 @@ function Get-DefaultConfig {
         logFile               = ''
         clipboardText         = [pscustomobject]@{
             enabled           = $false
-            folder            = ''   # empty = watchFolder, so dumps sync like a capture
+            folder            = ''   # empty = <dataDir>\clips, which is watched too
             minChars          = 50
             hostInbox         = '/home/admin/localsend-inbox'
             hotkeyWindowsPath = 'Ctrl+Shift+L'
@@ -97,6 +97,13 @@ function Resolve-Config {
     }
     if ([string]::IsNullOrWhiteSpace($cfg.logFile)) {
         $cfg.logFile = Join-Path $dataDir 'sender.log'
+    }
+    if ([string]::IsNullOrWhiteSpace($cfg.clipboardText.folder)) {
+        # Deliberately NOT the capture folder: a OneDrive "Files On-Demand"
+        # folder accepts writes from the capturing app but rejects file creation
+        # by other processes (every create fails with "Could not find file").
+        # Dumps go somewhere writable, and Get-WatchedFolders watches it too.
+        $cfg.clipboardText.folder = Join-Path $dataDir 'clips'
     }
 
     if ([string]::IsNullOrWhiteSpace($cfg.host)) {
@@ -540,14 +547,27 @@ function Sync-HotkeyQueues {
 # Reconcile
 # ---------------------------------------------------------------------------
 
+# The capture folder, plus the clipboard-dump folder when the hotkeys write
+# somewhere else - a dump has to be watched to be sent and delete-mirrored.
+function Get-WatchedFolders {
+    param([pscustomobject]$Cfg)
+    $folders = @($Cfg.watchFolder)
+    if ($Cfg.clipboardText.enabled -and $Cfg.clipboardText.folder -ne $Cfg.watchFolder) {
+        $folders += $Cfg.clipboardText.folder
+    }
+    return $folders
+}
+
 function Get-WatchedFiles {
     param([pscustomobject]$Cfg)
-    if (-not (Test-Path -LiteralPath $Cfg.watchFolder)) { return @{} }
     $map = @{}
-    Get-ChildItem -LiteralPath $Cfg.watchFolder -File -ErrorAction SilentlyContinue |
-        Where-Object { $Cfg.fileExtensions -contains $_.Extension.ToLowerInvariant() } |
-        Where-Object { -not $_.Name.EndsWith($Cfg.deleteMarkerSuffix) } |
-        ForEach-Object { $map[$_.Name] = $_ }
+    foreach ($folder in Get-WatchedFolders -Cfg $Cfg) {
+        if (-not (Test-Path -LiteralPath $folder)) { continue }
+        Get-ChildItem -LiteralPath $folder -File -ErrorAction SilentlyContinue |
+            Where-Object { $Cfg.fileExtensions -contains $_.Extension.ToLowerInvariant() } |
+            Where-Object { -not $_.Name.EndsWith($Cfg.deleteMarkerSuffix) } |
+            ForEach-Object { $map[$_.Name] = $_ }
+    }
     return $map
 }
 
@@ -613,7 +633,7 @@ $script:LogFile = $cfg.logFile
 $cliPath = Assert-Cli -Cli $cfg.localSendCli
 
 Write-Log "screenpresso-localsend sender starting"
-Write-Log "  watch folder : $($cfg.watchFolder)"
+Write-Log "  watch folder : $((Get-WatchedFolders -Cfg $cfg) -join ' | ')"
 Write-Log "  target host  : $($cfg.host):$($cfg.port) (https=$($cfg.https), pin=$([bool]$cfg.pin))"
 Write-Log "  cli          : $cliPath"
 Write-Log "  state file   : $($cfg.stateFile)"
