@@ -40,7 +40,7 @@ function Get-DefaultConfig {
         pin                   = ''
         https                 = $true
         watchFolder           = ''
-        fileExtensions        = @('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.mp4')
+        fileExtensions        = @('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.mp4', '.log')
         clipboard             = 'name'   # name | path | none
         localSendCli          = 'localsend-cli'
         deleteMarkerSuffix    = '.localsend-delete'
@@ -49,6 +49,15 @@ function Get-DefaultConfig {
         sendExistingOnStartup = $false
         stateFile             = ''
         logFile               = ''
+        clipboardText         = [pscustomobject]@{
+            enabled           = $false
+            folder            = ''   # empty = watchFolder, so dumps sync like a capture
+            minChars          = 50
+            hostInbox         = '/home/admin/localsend-inbox'
+            hotkeyWindowsPath = 'Ctrl+Shift+L'
+            hotkeyHostPath    = 'Ctrl+Shift+J'
+            hotkeyOpenFolder  = 'Ctrl+Shift+O'
+        }
     }
 }
 
@@ -73,6 +82,10 @@ function Resolve-Config {
         Write-Warning "Config file '$Path' not found - using defaults (host must be set)."
     }
     $cfg = Merge-Config -Default (Get-DefaultConfig) -Override $override
+
+    # Merge-Config is shallow, so a partial "clipboardText" block in config.json
+    # would drop the defaults for every key it leaves out.
+    $cfg.clipboardText = Merge-Config -Default (Get-DefaultConfig).clipboardText -Override $cfg.clipboardText
 
     if ([string]::IsNullOrWhiteSpace($cfg.watchFolder)) {
         $cfg.watchFolder = Join-Path ([Environment]::GetFolderPath('MyPictures')) 'Screenpresso'
@@ -244,6 +257,286 @@ function Set-ClipboardValue {
 }
 
 # ---------------------------------------------------------------------------
+# Clipboard-text hotkeys
+# ---------------------------------------------------------------------------
+
+# PowerShell has no global hotkeys, so the feature lives in one C# type: a
+# hidden message window owns the RegisterHotKey registrations and does the
+# save/clipboard/notify work itself. It runs on its own STA thread because
+# pwsh 7 is MTA while System.Windows.Forms.Clipboard requires STA; the poll
+# loop on the main thread is untouched. Names of the files it writes go on a
+# queue so the reconciler can send them without overwriting the path the
+# hotkey just put on the clipboard.
+
+$script:ClipTextHotkeySource = @'
+using System;
+using System.Collections.Concurrent;
+using System.Diagnostics;
+using System.Drawing;
+using System.IO;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
+using System.Windows.Forms;
+
+public class ClipTextHotkeys
+{
+    private const int WM_HOTKEY = 0x0312;
+    private const uint MOD_ALT = 0x0001, MOD_CONTROL = 0x0002, MOD_SHIFT = 0x0004, MOD_WIN = 0x0008;
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
+
+    private sealed class MessageWindow : NativeWindow
+    {
+        private readonly Action<int> _onHotkey;
+
+        public MessageWindow(Action<int> onHotkey)
+        {
+            _onHotkey = onHotkey;
+            CreateHandle(new CreateParams());
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (m.Msg == WM_HOTKEY) { _onHotkey((int)m.WParam); }
+            base.WndProc(ref m);
+        }
+    }
+
+    private readonly string _folder;
+    private readonly int _minChars;
+    private readonly string _hostInbox;
+    private readonly string[] _specs;
+    private MessageWindow _window;
+    private NotifyIcon _tray;
+    private System.Windows.Forms.Timer _trayTimer;
+
+    public readonly ConcurrentQueue<string> Created = new ConcurrentQueue<string>();
+    public readonly ConcurrentQueue<string> Messages = new ConcurrentQueue<string>();
+    public readonly ManualResetEventSlim Ready = new ManualResetEventSlim(false);
+
+    public ClipTextHotkeys(string folder, int minChars, string hostInbox,
+                           string windowsPathKey, string hostPathKey, string openFolderKey)
+    {
+        _folder = folder;
+        _minChars = minChars;
+        _hostInbox = (hostInbox == null ? "" : hostInbox.TrimEnd('/'));
+        _specs = new string[] { windowsPathKey, hostPathKey, openFolderKey };
+    }
+
+    public void Start()
+    {
+        Thread thread = new Thread(Run);
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.IsBackground = true;
+        thread.Name = "cliptext-hotkeys";
+        thread.Start();
+    }
+
+    // Exposed so the save path can be exercised without synthesising a keystroke.
+    public void Invoke(int id) { OnHotkey(id); }
+
+    private void Run()
+    {
+        _window = new MessageWindow(OnHotkey);
+        _tray = new NotifyIcon();
+        _tray.Icon = SystemIcons.Information;
+        _tray.Text = "screenpresso-localsend";
+        _trayTimer = new System.Windows.Forms.Timer();
+        _trayTimer.Interval = 6000;
+        _trayTimer.Tick += delegate { _trayTimer.Stop(); _tray.Visible = false; };
+
+        for (int i = 0; i < _specs.Length; i++)
+        {
+            uint mods, vk;
+            if (!TryParseHotkey(_specs[i], out mods, out vk))
+            {
+                Messages.Enqueue("WARN|Could not parse hotkey '" + _specs[i] + "' - " + Describe(i) + " is inactive.");
+                continue;
+            }
+            if (RegisterHotKey(_window.Handle, i + 1, mods, vk))
+            {
+                Messages.Enqueue("INFO|  hotkey      : " + _specs[i] + " - " + Describe(i));
+            }
+            else
+            {
+                Messages.Enqueue("WARN|Hotkey " + _specs[i] + " is already taken by another application - " + Describe(i) + " is inactive.");
+            }
+        }
+
+        Ready.Set();
+        Application.Run();
+    }
+
+    private static string Describe(int index)
+    {
+        if (index == 0) { return "save clipboard, Windows path back"; }
+        if (index == 1) { return "save clipboard, host path back"; }
+        return "open the folder";
+    }
+
+    private void OnHotkey(int id)
+    {
+        try
+        {
+            if (id == 3)
+            {
+                ProcessStartInfo info = new ProcessStartInfo("explorer.exe", "\"" + _folder + "\"");
+                info.UseShellExecute = true;
+                Process.Start(info);
+                return;
+            }
+            SaveClipboard(id == 2);
+        }
+        catch (Exception ex)
+        {
+            Messages.Enqueue("ERROR|Hotkey " + id + " failed: " + ex.Message);
+        }
+    }
+
+    private void SaveClipboard(bool hostPath)
+    {
+        string text = Clipboard.ContainsText() ? Clipboard.GetText() : null;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            Notify("Clipboard is empty or not text", "Nothing saved.");
+            return;
+        }
+        if (text.Length < _minChars)
+        {
+            Notify("Clipboard too short (" + text.Length + " chars)", "Minimum is " + _minChars + " - nothing saved.");
+            return;
+        }
+
+        Directory.CreateDirectory(_folder);
+        string name = UniqueName();
+        string full = Path.Combine(_folder, name);
+        File.WriteAllText(full, text, new UTF8Encoding(false));
+
+        // Enqueue BEFORE touching the clipboard: the reconciler has to know this
+        // file is hotkey-made before it can pick it up, or its own
+        // "clipboard <- filename" would overwrite the path set just below.
+        Created.Enqueue(name);
+
+        string value = hostPath ? _hostInbox + "/" + name : full;
+        Clipboard.SetText(value);
+
+        double kb = Math.Round(new FileInfo(full).Length / 1024.0, 1);
+        Notify("Clipboard saved (" + kb + " KB)", value);
+        Messages.Enqueue("INFO|Clipboard text -> " + name + " (" + kb + " KB); clipboard <- " + value);
+    }
+
+    // The name is second-resolution, so two saves inside the same second would
+    // collide - and since the file is also sent, the second would silently
+    // replace the host's copy of the first.
+    private string UniqueName()
+    {
+        string stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+        string candidate = "console-" + stamp + ".log";
+        int suffix = 2;
+        while (File.Exists(Path.Combine(_folder, candidate)))
+        {
+            candidate = "console-" + stamp + "-" + suffix + ".log";
+            suffix++;
+        }
+        return candidate;
+    }
+
+    private void Notify(string title, string text)
+    {
+        if (_tray == null) { return; }
+        _tray.Visible = true;
+        _tray.ShowBalloonTip(4000, title, text, ToolTipIcon.Info);
+        _trayTimer.Stop();
+        _trayTimer.Start();
+    }
+
+    private static bool TryParseHotkey(string spec, out uint mods, out uint vk)
+    {
+        mods = 0;
+        vk = 0;
+        if (string.IsNullOrWhiteSpace(spec)) { return false; }
+        foreach (string raw in spec.Split('+'))
+        {
+            string part = raw.Trim();
+            switch (part.ToLowerInvariant())
+            {
+                case "ctrl":
+                case "control": mods |= MOD_CONTROL; break;
+                case "shift": mods |= MOD_SHIFT; break;
+                case "alt": mods |= MOD_ALT; break;
+                case "win": mods |= MOD_WIN; break;
+                default:
+                    Keys key;
+                    if (!Enum.TryParse<Keys>(part, true, out key)) { return false; }
+                    vk = (uint)key;
+                    break;
+            }
+        }
+        return vk != 0 && mods != 0;
+    }
+}
+'@
+
+function Start-ClipboardTextHotkeys {
+    param([pscustomobject]$Cfg)
+
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+
+    if (-not ('ClipTextHotkeys' -as [type])) {
+        # WinForms comes from the loaded assemblies (Message lives in
+        # Windows.Forms.Primitives, not Windows.Forms). The BCL pieces must be
+        # simple names instead: .Assembly.Location resolves those to
+        # System.Private.CoreLib, which the compiler will not accept as the
+        # reference for a forwarded type.
+        $references = @(
+            [System.Windows.Forms.Form].Assembly.Location
+            [System.Windows.Forms.Message].Assembly.Location
+            [System.Drawing.Icon].Assembly.Location
+            [System.Diagnostics.Process].Assembly.Location
+            'System.Runtime'
+            'System.Collections.Concurrent'
+            'System.Threading'
+            'System.Threading.Thread'
+            'System.Text.Encoding.Extensions'
+            'System.ComponentModel.Primitives'
+            'netstandard'
+        )
+        Add-Type -TypeDefinition $script:ClipTextHotkeySource -ReferencedAssemblies $references
+    }
+
+    $settings = $Cfg.clipboardText
+    $folder = if ([string]::IsNullOrWhiteSpace($settings.folder)) { $Cfg.watchFolder } else { $settings.folder }
+
+    $hotkeys = [ClipTextHotkeys]::new(
+        $folder, [int]$settings.minChars, $settings.hostInbox,
+        $settings.hotkeyWindowsPath, $settings.hotkeyHostPath, $settings.hotkeyOpenFolder)
+    $hotkeys.Start()
+
+    if (-not $hotkeys.Ready.Wait(5000)) {
+        Write-Log "Clipboard hotkey thread did not report ready within 5s." 'WARN'
+    }
+    return $hotkeys
+}
+
+# Drains both queues: created file names become clipboard suppressions for the
+# reconciler, log messages go to the sender log.
+function Sync-HotkeyQueues {
+    param($Hotkeys, [System.Collections.Generic.HashSet[string]]$SuppressClipboard)
+
+    $name = ''
+    while ($Hotkeys.Created.TryDequeue([ref]$name)) { [void]$SuppressClipboard.Add($name) }
+
+    $message = ''
+    while ($Hotkeys.Messages.TryDequeue([ref]$message)) {
+        $parts = $message.Split('|', 2)
+        Write-Log $parts[1] $parts[0]
+    }
+}
+
+# ---------------------------------------------------------------------------
 # Reconcile
 # ---------------------------------------------------------------------------
 
@@ -259,7 +552,11 @@ function Get-WatchedFiles {
 }
 
 function Invoke-Reconcile {
-    param([pscustomobject]$Cfg, [hashtable]$State)
+    param(
+        [pscustomobject]$Cfg,
+        [hashtable]$State,
+        [System.Collections.Generic.HashSet[string]]$SuppressClipboard
+    )
 
     $current = Get-WatchedFiles -Cfg $Cfg
     $now = Get-Date
@@ -280,7 +577,13 @@ function Invoke-Reconcile {
                 size   = $file.Length
                 sentAt = $now.ToString('o')
             }
-            Set-ClipboardValue -Cfg $Cfg -File $file
+            if ($SuppressClipboard.Contains($name)) {
+                # A clipboard hotkey wrote this file and already put the path on
+                # the clipboard - don't replace it with the bare file name.
+                [void]$SuppressClipboard.Remove($name)
+            } else {
+                Set-ClipboardValue -Cfg $Cfg -File $file
+            }
             $changed = $true
         }
     }
@@ -315,6 +618,18 @@ Write-Log "  target host  : $($cfg.host):$($cfg.port) (https=$($cfg.https), pin=
 Write-Log "  cli          : $cliPath"
 Write-Log "  state file   : $($cfg.stateFile)"
 
+$suppressClipboard = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+$hotkeys = $null
+if ($cfg.clipboardText.enabled) {
+    try {
+        $hotkeys = Start-ClipboardTextHotkeys -Cfg $cfg
+        Sync-HotkeyQueues -Hotkeys $hotkeys -SuppressClipboard $suppressClipboard
+    } catch {
+        Write-Log "Clipboard hotkeys unavailable: $($_.Exception.Message)" 'WARN'
+        $hotkeys = $null
+    }
+}
+
 if (-not (Test-Path -LiteralPath $cfg.watchFolder)) {
     Write-Log "Watch folder does not exist yet; it will be picked up once Screenpresso creates it." 'WARN'
 }
@@ -335,7 +650,8 @@ if ($state.Count -eq 0 -and -not $cfg.sendExistingOnStartup) {
 }
 
 if ($Once) {
-    if (Invoke-Reconcile -Cfg $cfg -State $state) { Save-State -State $state -Path $cfg.stateFile }
+    if ($hotkeys) { Sync-HotkeyQueues -Hotkeys $hotkeys -SuppressClipboard $suppressClipboard }
+    if (Invoke-Reconcile -Cfg $cfg -State $state -SuppressClipboard $suppressClipboard) { Save-State -State $state -Path $cfg.stateFile }
     Write-Log "Single reconcile pass complete."
     return
 }
@@ -343,7 +659,8 @@ if ($Once) {
 Write-Log "Watching (poll every $($cfg.pollIntervalSeconds)s). Ctrl+C to stop."
 while ($true) {
     try {
-        if (Invoke-Reconcile -Cfg $cfg -State $state) { Save-State -State $state -Path $cfg.stateFile }
+        if ($hotkeys) { Sync-HotkeyQueues -Hotkeys $hotkeys -SuppressClipboard $suppressClipboard }
+        if (Invoke-Reconcile -Cfg $cfg -State $state -SuppressClipboard $suppressClipboard) { Save-State -State $state -Path $cfg.stateFile }
     } catch {
         Write-Log "Reconcile error: $($_.Exception.Message)" 'ERROR'
     }
