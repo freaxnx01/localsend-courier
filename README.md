@@ -9,6 +9,10 @@ clipboard, and mirror local deletions to the receiving host.
 - **Host** — Linux box running a headless LocalSend receive daemon plus a small
   companion watcher that mirrors deletions.
 
+Setting this up on new machines: **[INSTALL.md](INSTALL.md)** — prerequisites per
+side, install, configuration, verification and troubleshooting. What the tool is
+for and what it deliberately does not do: [PROJECT-OVERVIEW.md](PROJECT-OVERVIEW.md).
+
 ## Why a companion watcher?
 
 The LocalSend protocol is **send-only** — there is no official CLI (upstream
@@ -110,7 +114,7 @@ Without systemd you can run the two scripts directly:
 | `pin`                  | `""`                                      | LocalSend PIN, if the receiver requires one. |
 | `https`                | `true`                                    | Use HTTPS transport (must match the receiver). |
 | `watchFolder`          | `""` → `Pictures\Screenpresso`            | Folder to watch. Empty = Screenpresso default. |
-| `fileExtensions`       | png, jpg, jpeg, gif, bmp, webp, mp4       | Only files with these extensions are sent. |
+| `fileExtensions`       | png, jpg, jpeg, gif, bmp, webp, mp4, log  | Only files with these extensions are sent. |
 | `clipboard`            | `"name"`                                  | `name` = copy filename, `path` = full path, `none`. |
 | `localSendCli`         | `"localsend-cli"`                         | Command or full path to the CLI. |
 | `deleteMarkerSuffix`   | `".localsend-delete"`                     | Suffix for delete-marker files. Must match host. |
@@ -119,6 +123,7 @@ Without systemd you can run the two scripts directly:
 | `sendExistingOnStartup`| `false`                                   | If true, send files already present at first run. |
 | `stateFile`            | `""` → `%LOCALAPPDATA%\...\state.json`     | Where the known-file state is stored. |
 | `logFile`              | `""` → `%LOCALAPPDATA%\...\sender.log`     | Log file path. |
+| `clipboardText`        | *(disabled)*                              | Clipboard-text hotkeys — see below. |
 
 ### Host — `host/config.env`
 
@@ -208,6 +213,36 @@ Polling (rather than only a `FileSystemWatcher`) means deletions that happen
 while the sender is stopped are still reconciled on the next start. Send failures
 are logged and retried on the next poll — nothing is marked done until the CLI
 returns success.
+
+## Clipboard-text hotkeys
+
+Optional, **off by default**. When `clipboardText.enabled` is true the sender also
+registers global hotkeys that write the clipboard's *text* into a file and put a
+path back on the clipboard:
+
+| Hotkey | Default | Effect |
+|---|---|---|
+| Save, Windows path back | `Ctrl+Shift+L` | Writes `console-<stamp>.log`, clipboard gets the local path. |
+| Save, host path back    | `Ctrl+Shift+J` | Same file, clipboard gets `<hostInbox>/<name>` — the path it will have on the host. |
+| Open the folder         | `Ctrl+Shift+O` | Opens the folder in Explorer. |
+
+Because the file is written into the watched folder, it is sent and
+delete-mirrored like any capture — so a console dump reaches the host the same way
+a screenshot does. Add `.log` to `fileExtensions` or it will be written but never
+sent.
+
+Details worth knowing:
+
+- Empty, non-text and shorter-than-`minChars` clipboards are refused with a notification; nothing is written and the clipboard is left alone.
+- Files are UTF-8 **without** a BOM. Two saves in the same second get `-2`, `-3` … appended rather than overwriting each other.
+- The sender does **not** overwrite the path with the file name when it then sends that file — hotkey-written files are exempt from the `clipboard` setting.
+- A hotkey already owned by another application is logged as a `WARN` at startup and left inactive; file syncing is unaffected.
+- This is the only part of the tool that *reads* the clipboard. Everything else only writes it.
+
+Implementation: PowerShell has no global hotkeys, so a small C# type owns a hidden
+message window, the `RegisterHotKey` registrations and the save/clipboard/notify
+work, on its own STA thread (`pwsh` is MTA; the clipboard API requires STA). The
+poll loop is untouched.
 
 ## Security notes
 

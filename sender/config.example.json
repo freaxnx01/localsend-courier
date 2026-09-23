@@ -4,7 +4,7 @@
   "pin": "",
   "https": true,
   "watchFolder": "",
-  "fileExtensions": [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".mp4"],
+  "fileExtensions": [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".mp4", ".log"],
   "clipboard": "name",
   "localSendCli": "localsend-cli",
   "deleteMarkerSuffix": ".localsend-delete",
@@ -12,5 +12,14 @@
   "stabilizeSeconds": 1.5,
   "sendExistingOnStartup": false,
   "stateFile": "",
-  "logFile": ""
+  "logFile": "",
+  "clipboardText": {
+    "enabled": false,
+    "folder": "",
+    "minChars": 50,
+    "hostInbox": "/home/admin/localsend-inbox",
+    "hotkeyWindowsPath": "Ctrl+Shift+L",
+    "hotkeyHostPath": "Ctrl+Shift+J",
+    "hotkeyOpenFolder": "Ctrl+Shift+O"
+  }
 }
