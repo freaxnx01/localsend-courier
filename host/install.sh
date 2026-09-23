@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install the screenpresso-localsend host side as systemd --user services.
+# Install the localsend-courier host side as systemd --user services.
 #
 #   ./install.sh            install + enable + start both services
 #   ./install.sh --uninstall   stop, disable and remove them
@@ -10,8 +10,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
-RECV_UNIT="screenpresso-receiver.service"
-WATCH_UNIT="screenpresso-delete-watcher.service"
+RECV_UNIT="localsend-courier-receiver.service"
+WATCH_UNIT="localsend-courier-delete-watcher.service"
 
 uninstall() {
     systemctl --user disable --now "$RECV_UNIT" "$WATCH_UNIT" 2>/dev/null || true
@@ -58,9 +58,9 @@ WantedBy=default.target
 EOF
 }
 
-render_unit "$RECV_UNIT" "screenpresso-localsend receive daemon" "receive.sh" \
+render_unit "$RECV_UNIT" "localsend-courier receive daemon" "receive.sh" \
     $'After=network-online.target\nWants=network-online.target'
-render_unit "$WATCH_UNIT" "screenpresso-localsend delete-marker watcher" "delete-watcher.sh" \
+render_unit "$WATCH_UNIT" "localsend-courier delete-marker watcher" "delete-watcher.sh" \
     "After=$RECV_UNIT"
 
 # Allow user services to run without an active session.

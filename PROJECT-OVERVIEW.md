@@ -1,4 +1,4 @@
-# PROJECT-OVERVIEW — screenpresso-localsend
+# PROJECT-OVERVIEW — localsend-courier
 
 ## Purpose
 
@@ -43,7 +43,7 @@ bin) belongs to the separate `screenpresso-triage` skill, not here.
 
 `sender/Send-Screenpresso.ps1` (PowerShell 7) runs a poll loop that reconciles
 the watch folder against a JSON state file in
-`%LOCALAPPDATA%\screenpresso-localsend\`. A file that is new, matches the
+`%LOCALAPPDATA%\localsend-courier\`. A file that is new, matches the
 extension whitelist and has been idle for `stabilizeSeconds` is handed to
 `localsend-cli send --to <host> --direct <host:port> --file <path>`; on success
 it is recorded in state and its name goes to the clipboard. A name that is in
@@ -95,9 +95,9 @@ Both sides must agree on exactly four things — everything else is local detail
 
 Windows sender → `srvdmsk8s01`. The host's receiver is a pre-existing
 **localgo** instance on 53317 with `--auto-accept` writing to
-`~/localsend-inbox`; only `screenpresso-delete-watcher.service` was installed
+`~/localsend-inbox`; only `localsend-courier-delete-watcher.service` was installed
 there, pointed at that inbox. The repo's own `host/receive.sh` +
-`screenpresso-receiver.service` exist for a fresh host but are deliberately not
+`localsend-courier-receiver.service` exist for a fresh host but are deliberately not
 deployed. The two machines are on different subnets, so LocalSend discovery
 cannot work and `--direct` is mandatory.
 

@@ -26,9 +26,9 @@ this tool only watches the folder they land in.
 | What | Where |
 |---|---|
 | Captures watched | `<MyPictures>\Screenpresso` (OneDrive-redirected and localised on a managed profile) |
-| Clipboard dumps | `%LOCALAPPDATA%\screenpresso-localsend\clips` |
-| Log | `%LOCALAPPDATA%\screenpresso-localsend\sender.log` |
-| State | `%LOCALAPPDATA%\screenpresso-localsend\state.json` |
+| Clipboard dumps | `%LOCALAPPDATA%\localsend-courier\clips` |
+| Log | `%LOCALAPPDATA%\localsend-courier\sender.log` |
+| State | `%LOCALAPPDATA%\localsend-courier\state.json` |
 | Config | `sender\config.json` (gitignored) |
 | Host inbox | `~/localsend-inbox` |
 
@@ -36,13 +36,13 @@ this tool only watches the folder they land in.
 
 ```powershell
 # is it running?
-Get-ScheduledTask -TaskName 'screenpresso-localsend' | Get-ScheduledTaskInfo
+Get-ScheduledTask -TaskName 'localsend-courier' | Get-ScheduledTaskInfo
 
-Start-ScheduledTask -TaskName 'screenpresso-localsend'
-Stop-ScheduledTask  -TaskName 'screenpresso-localsend'
+Start-ScheduledTask -TaskName 'localsend-courier'
+Stop-ScheduledTask  -TaskName 'localsend-courier'
 
 # follow the log
-Get-Content "$env:LOCALAPPDATA\screenpresso-localsend\sender.log" -Tail 20 -Wait
+Get-Content "$env:LOCALAPPDATA\localsend-courier\sender.log" -Tail 20 -Wait
 
 # foreground run (Ctrl+C to stop) / one reconcile pass and exit
 pwsh -NoProfile -File .\sender\Send-Screenpresso.ps1
@@ -58,9 +58,9 @@ Config changes need a restart: `Stop-ScheduledTask` then `Start-ScheduledTask`.
 ## Host commands
 
 ```bash
-systemctl --user is-active screenpresso-delete-watcher.service
-systemctl --user restart screenpresso-delete-watcher.service
-journalctl --user -u screenpresso-delete-watcher.service -f
+systemctl --user is-active localsend-courier-delete-watcher.service
+systemctl --user restart localsend-courier-delete-watcher.service
+journalctl --user -u localsend-courier-delete-watcher.service -f
 
 ls -la ~/localsend-inbox/
 

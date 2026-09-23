@@ -1,6 +1,6 @@
 # INSTALL
 
-Setting up screenpresso-localsend on a new pair of machines: a **Windows client**
+Setting up localsend-courier on a new pair of machines: a **Windows client**
 (where Screenpresso runs) and a **Linux host** (where the captures should land).
 
 Read [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md) first if you want to know what
@@ -53,8 +53,8 @@ localised profile that is **not** `%USERPROFILE%\Pictures`:
 ## 2. Install the host
 
 ```bash
-git clone https://github.com/freaxnx01/screenpresso-localsend.git
-cd screenpresso-localsend/host
+git clone https://github.com/freaxnx01/localsend-courier.git
+cd localsend-courier/host
 cp config.env.example config.env
 $EDITOR config.env          # set INBOX, PORT, DEVICE_NAME, LOCALSEND_CLI, PIN
 ./install.sh
@@ -66,14 +66,14 @@ user manager instead of yours.
 
 It installs two units:
 
-- `screenpresso-receiver.service` — the headless receive loop
-- `screenpresso-delete-watcher.service` — applies the delete markers
+- `localsend-courier-receiver.service` — the headless receive loop
+- `localsend-courier-delete-watcher.service` — applies the delete markers
 
 Check both:
 
 ```bash
-systemctl --user is-active screenpresso-receiver.service screenpresso-delete-watcher.service
-journalctl --user -u screenpresso-delete-watcher.service -f
+systemctl --user is-active localsend-courier-receiver.service localsend-courier-delete-watcher.service
+journalctl --user -u localsend-courier-delete-watcher.service -f
 ```
 
 ### Coexisting with a receiver you already run
@@ -83,8 +83,8 @@ the port you want, **do not stand up a second one**. Install only the
 delete-watcher and point it at the existing receiver's download folder:
 
 1. Write `host/config.env` with `INBOX` set to that folder and `PORT` to the port the existing receiver listens on.
-2. Render `screenpresso-delete-watcher.service` into `~/.config/systemd/user/` by hand, replacing `After=/Wants=screenpresso-receiver.service` with the existing receiver's unit name.
-3. `systemctl --user enable --now screenpresso-delete-watcher.service` and `loginctl enable-linger "$USER"`.
+2. Render `localsend-courier-delete-watcher.service` into `~/.config/systemd/user/` by hand, replacing `After=/Wants=localsend-courier-receiver.service` with the existing receiver's unit name.
+3. `systemctl --user enable --now localsend-courier-delete-watcher.service` and `loginctl enable-linger "$USER"`.
 
 `install.sh` is not used in this case — it installs both units unconditionally.
 
@@ -93,8 +93,8 @@ delete-watcher and point it at the existing receiver's download folder:
 ## 3. Install the Windows client
 
 ```powershell
-git clone https://github.com/freaxnx01/screenpresso-localsend.git
-cd screenpresso-localsend\sender
+git clone https://github.com/freaxnx01/localsend-courier.git
+cd localsend-courier\sender
 Copy-Item config.example.json config.json
 ```
 
@@ -116,7 +116,7 @@ Make it permanent — a hidden per-user task that starts at logon:
 
 ```powershell
 pwsh -NoProfile -File .\Install-Sender.ps1
-Start-ScheduledTask -TaskName 'screenpresso-localsend'
+Start-ScheduledTask -TaskName 'localsend-courier'
 
 # remove again:
 pwsh -NoProfile -File .\Install-Sender.ps1 -Unregister
@@ -190,7 +190,7 @@ folder, so it syncs to the host and delete-mirrors like a capture.
 }
 ```
 
-- `folder` empty = `%LOCALAPPDATA%\screenpresso-localsend\clips`, watched alongside the capture folder. Do **not** point it at a OneDrive Files On-Demand folder: such a folder accepts writes from the capturing app but rejects file creation by other processes, and every save fails with `Could not find file`.
+- `folder` empty = `%LOCALAPPDATA%\localsend-courier\clips`, watched alongside the capture folder. Do **not** point it at a OneDrive Files On-Demand folder: such a folder accepts writes from the capturing app but rejects file creation by other processes, and every save fails with `Could not find file`.
 - `hostInbox` is only used to build the path string for `hotkeyHostPath`; it is not verified against the host.
 - `minChars` refuses accidental short clipboards.
 - Add `.log` to `fileExtensions`, or the dumps are written but never sent.
@@ -208,8 +208,8 @@ Do these in order — each one isolates a different layer:
 4. **Delete** — delete the file locally. Expect `Local delete detected: …` on the client and `[delete-watcher] deleted …` in the host's journal, with no `.localsend-delete` file left behind.
 5. **Hotkeys**, if enabled — copy a long text, press `Ctrl+Shift+L`, and confirm both the notification and that the path is on your clipboard.
 
-Client log: `%LOCALAPPDATA%\screenpresso-localsend\sender.log`
-Host log: `journalctl --user -u screenpresso-delete-watcher.service`
+Client log: `%LOCALAPPDATA%\localsend-courier\sender.log`
+Host log: `journalctl --user -u localsend-courier-delete-watcher.service`
 
 ---
 

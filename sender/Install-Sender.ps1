@@ -8,7 +8,7 @@
     Path to the sender config.json. Defaults to config.json next to this script.
 
 .PARAMETER TaskName
-    Scheduled task name. Default: 'screenpresso-localsend'.
+    Scheduled task name. Default: 'localsend-courier'.
 
 .PARAMETER Unregister
     Remove the scheduled task instead of creating it.
@@ -21,7 +21,7 @@
 [CmdletBinding()]
 param(
     [string]$ConfigPath = (Join-Path $PSScriptRoot 'config.json'),
-    [string]$TaskName = 'screenpresso-localsend',
+    [string]$TaskName = 'localsend-courier',
     [switch]$Unregister
 )
 

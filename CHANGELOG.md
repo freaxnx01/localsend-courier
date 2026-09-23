@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Project renamed from `screenpresso-localsend` to `localsend-courier`. The
+  scheduled task, the `%LOCALAPPDATA%` data directory and the host systemd units
+  (`localsend-courier-receiver.service`, `localsend-courier-delete-watcher.service`)
+  carry the new name. Existing installs: stop the task, move the data directory,
+  re-run `Install-Sender.ps1`, and re-render the host unit. The `.localsend-delete`
+  marker suffix is unchanged.
+
 ### Added
 
 - Clipboard-text hotkeys in the sender (`clipboardText` config block, off by
