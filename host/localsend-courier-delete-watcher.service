@@ -1,0 +1,13 @@
+[Unit]
+Description=localsend-courier delete-marker watcher
+After=localsend-courier-receiver.service
+
+[Service]
+Type=simple
+Environment=CONFIG_ENV=%h/localsend-courier/host/config.env
+ExecStart=%h/localsend-courier/host/delete-watcher.sh
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

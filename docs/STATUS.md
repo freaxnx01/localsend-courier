@@ -1,7 +1,7 @@
-# screenpresso-localsend — Status & Handoff
+# localsend-courier — Status & Handoff
 
-**Repo:** https://github.com/freaxnx01/screenpresso-localsend (public)
-**Local:** `~/repos/github/freaxnx01/public/screenpresso-localsend`
+**Repo:** https://github.com/freaxnx01/localsend-courier (public)
+**Local:** `~/repos/github/freaxnx01/public/localsend-courier`
 **Branch:** `main` — in sync with `origin/main`.
 **Date:** 2026-09-23 (push blocker cleared, incident cleanup closed)
 
@@ -52,7 +52,7 @@ the host. New **public** GitHub repo under **freaxnx01**.
   landed in the inbox under its basename (what the delete-watcher expects).
 - **`inotify-tools` is NOT installed** on the host — the delete-watcher needs
   `inotifywait`. Install with `sudo apt install inotify-tools` before enabling
-  `screenpresso-delete-watcher.service`.
+  `localsend-courier-delete-watcher.service`.
 
 ## Host bring-up — DONE (2026-09-21, `srvdmsk8s01`)
 
@@ -66,11 +66,11 @@ delete-watcher was installed, pointed at localgo's inbox.
 - `inotify-tools` 4.23.9.0 installed (`apt`).
 - `host/config.env` written on the host: `INBOX=/home/admin/localsend-inbox`,
   `PORT=53317`, `DEVICE_NAME=CC-CLI`, `LOCALSEND_CLI=/home/admin/.local/bin/localsend-cli`.
-- `screenpresso-delete-watcher.service` rendered by hand into
+- `localsend-courier-delete-watcher.service` rendered by hand into
   `~/.config/systemd/user/` (`After=/Wants=localgo.service` instead of
-  `screenpresso-receiver.service`), enabled + started, linger on. `install.sh` was
+  `localsend-courier-receiver.service`), enabled + started, linger on. `install.sh` was
   **not** used — it installs both units unconditionally.
-- `screenpresso-receiver.service` is deliberately **not** installed.
+- `localsend-courier-receiver.service` is deliberately **not** installed.
 
 ### Verified live on the host
 - Marker round-trip over the wire: `localsend-cli send --to CC-CLI --direct
@@ -204,7 +204,7 @@ indexed in `MEMORY.md`). The user may also want it in the global
 3. **KEPT, on purpose.** The scratchpad `.ps1` files — `capture.ps1` (the flagged
    snippet, sha256 `6e6e920b…`), `drop.ps1`, `mkpng.ps1`, `test-assert-cli.ps1` —
    stay in the session temp dir
-   `%LOCALAPPDATA%\Temp\claude\C--Develop-GitHubRepos-freaxnx01-public-screenpresso-localsend\f2722abb-c9d7-43d6-bb57-6e53cd0a6edc\scratchpad\`
+   `%LOCALAPPDATA%\Temp\claude\C--Develop-GitHubRepos-freaxnx01-public-localsend-courier\f2722abb-c9d7-43d6-bb57-6e53cd0a6edc\scratchpad\`
    in case ICT asks for the exact script.
 
 **Unexplained, noted:** two PNGs (`2026-09-23_09h20_20.png`, `…09h20_29.png`)

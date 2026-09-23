@@ -1,4 +1,4 @@
-# screenpresso-localsend
+# localsend-courier
 
 Auto-forward [Screenpresso](https://www.screenpresso.com/) screenshots to another
 machine over [LocalSend](https://localsend.org/), copy the filename to your
@@ -95,8 +95,8 @@ $EDITOR config.env          # set INBOX, PIN, HTTPS to match the sender
 ```
 
 This starts:
-- `screenpresso-receiver.service` — `localsend-cli [--alias NAME] [--protocol http] receive --output $INBOX`
-- `screenpresso-delete-watcher.service` — mirrors deletions in `$INBOX`
+- `localsend-courier-receiver.service` — `localsend-cli [--alias NAME] [--protocol http] receive --output $INBOX`
+- `localsend-courier-delete-watcher.service` — mirrors deletions in `$INBOX`
 
 Without systemd you can run the two scripts directly:
 
@@ -143,7 +143,7 @@ Without systemd you can run the two scripts directly:
 If the Linux box already runs a LocalSend receiver — e.g.
 [`bethropolis/localgo`](https://github.com/bethropolis/localgo) as a
 `systemd --user` service — there is no reason to start a second one. Skip
-`screenpresso-receiver.service` entirely and install **only the delete
+`localsend-courier-receiver.service` entirely and install **only the delete
 watcher**, pointed at the receiver you already have.
 
 Point `host/config.env` at the existing receiver's settings instead of your own:
@@ -169,16 +169,16 @@ write the watcher unit yourself and order it after the receiver you actually
 have:
 
 ```ini
-# ~/.config/systemd/user/screenpresso-delete-watcher.service
+# ~/.config/systemd/user/localsend-courier-delete-watcher.service
 [Unit]
-Description=screenpresso-localsend delete-marker watcher
+Description=localsend-courier delete-marker watcher
 After=localgo.service
 Wants=localgo.service
 
 [Service]
 Type=simple
-Environment=CONFIG_ENV=%h/screenpresso-localsend/host/config.env
-ExecStart=%h/screenpresso-localsend/host/delete-watcher.sh
+Environment=CONFIG_ENV=%h/localsend-courier/host/config.env
+ExecStart=%h/localsend-courier/host/delete-watcher.sh
 Restart=always
 RestartSec=2
 
@@ -188,7 +188,7 @@ WantedBy=default.target
 
 ```sh
 systemctl --user daemon-reload
-systemctl --user enable --now screenpresso-delete-watcher.service
+systemctl --user enable --now localsend-courier-delete-watcher.service
 loginctl enable-linger "$USER"   # keep it running without an active login
 ```
 
@@ -228,7 +228,7 @@ path back on the clipboard:
 | Save, host path back    | `Ctrl+Shift+J` | Same file, clipboard gets `<hostInbox>/<name>` — the path it will have on the host. |
 | Open the folder         | `Ctrl+Shift+O` | Opens the folder in Explorer. |
 
-Dumps are written to their own folder (`%LOCALAPPDATA%\screenpresso-localsend\clips`
+Dumps are written to their own folder (`%LOCALAPPDATA%\localsend-courier\clips`
 by default), which the sender watches **in addition to** the capture folder — so a
 console dump is sent and delete-mirrored exactly like a screenshot. Add `.log` to
 `fileExtensions` or it will be written but never sent.

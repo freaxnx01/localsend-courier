@@ -91,7 +91,7 @@ function Resolve-Config {
         $cfg.watchFolder = Join-Path ([Environment]::GetFolderPath('MyPictures')) 'Screenpresso'
     }
 
-    $dataDir = Join-Path $env:LOCALAPPDATA 'screenpresso-localsend'
+    $dataDir = Join-Path $env:LOCALAPPDATA 'localsend-courier'
     if ([string]::IsNullOrWhiteSpace($cfg.stateFile)) {
         $cfg.stateFile = Join-Path $dataDir 'state.json'
     }
@@ -230,7 +230,7 @@ function Send-ViaLocalSend {
 function Send-DeleteMarker {
     param([pscustomobject]$Cfg, [string]$Name)
 
-    $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) 'screenpresso-localsend'
+    $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) 'localsend-courier'
     New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
     $markerName = "$Name$($Cfg.deleteMarkerSuffix)"
     $markerPath = Join-Path $tmpDir $markerName
@@ -349,7 +349,7 @@ public class ClipTextHotkeys
         _window = new MessageWindow(OnHotkey);
         _tray = new NotifyIcon();
         _tray.Icon = SystemIcons.Information;
-        _tray.Text = "screenpresso-localsend";
+        _tray.Text = "localsend-courier";
         _trayTimer = new System.Windows.Forms.Timer();
         _trayTimer.Interval = 6000;
         _trayTimer.Tick += delegate { _trayTimer.Stop(); _tray.Visible = false; };
@@ -632,7 +632,7 @@ $script:LogFile = $cfg.logFile
 
 $cliPath = Assert-Cli -Cli $cfg.localSendCli
 
-Write-Log "screenpresso-localsend sender starting"
+Write-Log "localsend-courier sender starting"
 Write-Log "  watch folder : $((Get-WatchedFolders -Cfg $cfg) -join ' | ')"
 Write-Log "  target host  : $($cfg.host):$($cfg.port) (https=$($cfg.https), pin=$([bool]$cfg.pin))"
 Write-Log "  cli          : $cliPath"

@@ -1,13 +1,13 @@
 [Unit]
-Description=screenpresso-localsend receive daemon
+Description=localsend-courier receive daemon
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
 # Adjust paths/user to your install location.
-Environment=CONFIG_ENV=%h/screenpresso-localsend/host/config.env
-ExecStart=%h/screenpresso-localsend/host/receive.sh
+Environment=CONFIG_ENV=%h/localsend-courier/host/config.env
+ExecStart=%h/localsend-courier/host/receive.sh
 Restart=always
 RestartSec=2
 
