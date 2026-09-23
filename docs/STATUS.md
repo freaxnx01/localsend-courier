@@ -3,7 +3,7 @@
 **Repo:** https://github.com/freaxnx01/screenpresso-localsend (public)
 **Local:** `~/repos/github/freaxnx01/public/screenpresso-localsend`
 **Branch:** `main` — in sync with `origin/main`.
-**Date:** 2026-09-21 (host bring-up completed)
+**Date:** 2026-09-23 (push blocker cleared, incident cleanup closed)
 
 ## Goal
 A tool for Win11 (pwsh) that watches the Screenpresso capture folder
@@ -85,14 +85,22 @@ delete-watcher was installed, pointed at localgo's inbox.
 
 ## Open items
 
-0. **BLOCKER — cannot push.** This STATUS commit is made locally but **not on
-   GitHub**. Both the Windows dev box and `srvdmsk8s01` authenticate as
-   `anim-bossinfo-ch`, which has only `pull` on `freaxnx01/screenpresso-localsend`
-   (`gh api repos/freaxnx01/screenpresso-localsend --jq .permissions` →
-   `push: false`). The commit exists on `main` in **both** working copies, one
-   ahead of `origin/main` (`e32c284`). Fix by switching `gh` to the `freaxnx01`
-   account or granting `anim-bossinfo-ch` write, then `git push origin main` from
-   either box.
+0. **DONE (2026-09-23) — pushed.** ~~BLOCKER — cannot push.~~ The `freaxnx01`
+   PAT was there all along: this box keeps **one `.envrc` per GitHub account
+   directory** — `C:\Develop\GitHubRepos\freaxnx01\.envrc` (account `freaxnx01`,
+   `admin/push: true` on this repo) and `C:\Develop\GitHubRepos\anim-bossinfo-ch\.envrc`
+   (the work account `gh` is logged into). Loading the right one and pushing:
+
+   ```bash
+   cd <repo> && eval "$(direnv export bash)" && git push origin main
+   ```
+
+   All 7 commits (`e32c284..8bfd713`) are on `origin/main`; `main` is in sync again.
+   **Gotcha:** `direnv exec <dir> <cmd>` is broken on this Windows box — its PATH
+   lookup fails for *every* command (`git`, `git.exe`, absolute paths alike), from
+   both Git Bash and pwsh. Use `eval "$(direnv export bash)"` from **Git Bash**;
+   pwsh here also could not resolve `github.com` at all.
+
 1. **CORRECTED + mostly DONE (2026-09-22).** ~~Windows sender is not installed
    anywhere we can see.~~ That was wrong: **Screenpresso IS installed and running
    on this dev box** (`%LOCALAPPDATA%\Learnpulse\Screenpresso\Screenpresso.exe`).
@@ -177,16 +185,24 @@ Recorded as a durable memory: `never-take-screenshots` (project memory dir,
 indexed in `MEMORY.md`). The user may also want it in the global
 `~/.claude/CLAUDE.md`; not done yet.
 
-### Open cleanup from the incident (all awaiting the user's decision)
-1. The **sender is still running** in a background process from that session
-   (`pwsh -File sender/Send-Screenpresso.ps1`, watching the real Screenpresso
-   folder). It is NOT installed as a scheduled task and does not survive a reboot
-   or the end of that session. Not killed deliberately — ICT may want the state.
-2. The user's own screenshot **of the Defender alert** was auto-synced by that
-   sender to `srvdmsk8s01:~/localsend-inbox/2026-09-22_15h45_36.png` (635,893 B).
-   Left in place pending their decision.
-3. Scratchpad `.ps1` files (incl. `capture.ps1`, the flagged snippet) are in the
-   session temp dir, kept in case ICT wants them.
+### Cleanup from the incident — resolved 2026-09-23
+
+1. **Moot.** The sender process left running from that session is gone — the box
+   rebooted (earliest process 08:02, 2026-09-23). No `Send-Screenpresso.ps1` runs
+   anywhere and no scheduled task exists, so nothing had to be killed.
+2. **DONE.** The user's screenshot of the Defender alert
+   (`srvdmsk8s01:~/localsend-inbox/2026-09-22_15h45_36.png`) was **deleted** from
+   the host on their instruction.
+3. **KEPT, on purpose.** The scratchpad `.ps1` files — `capture.ps1` (the flagged
+   snippet, sha256 `6e6e920b…`), `drop.ps1`, `mkpng.ps1`, `test-assert-cli.ps1` —
+   stay in the session temp dir
+   `%LOCALAPPDATA%\Temp\claude\C--Develop-GitHubRepos-freaxnx01-public-screenpresso-localsend\f2722abb-c9d7-43d6-bb57-6e53cd0a6edc\scratchpad\`
+   in case ICT asks for the exact script.
+
+**Unexplained, noted:** two PNGs (`2026-09-23_09h20_20.png`, `…09h20_29.png`)
+landed in the host inbox at 09:20 on 2026-09-23 — after the reboot, with no sender
+running on this box. Most likely sent by hand from another LocalSend device; left
+in place.
 
 Silver lining: that alert screenshot was a genuine Screenpresso capture, and it
 synced correctly in ~3 s — so the real end-to-end path **is** proven working; only
