@@ -41,11 +41,21 @@ if ($Unregister) {
 $scriptPath = Join-Path $PSScriptRoot 'Send-Screenpresso.ps1'
 if (-not (Test-Path -LiteralPath $scriptPath)) { throw "Cannot find Send-Screenpresso.ps1 next to this installer." }
 if (-not (Test-Path -LiteralPath $ConfigPath)) { throw "Config '$ConfigPath' not found. Copy config.example.json to config.json and edit it first." }
+# The task starts with no working directory, so a relative path like .\config.json would not resolve.
+$ConfigPath = (Resolve-Path -LiteralPath $ConfigPath).Path
+
+$launcher = Join-Path $PSScriptRoot 'run-hidden.vbs'
+if (-not (Test-Path -LiteralPath $launcher)) { throw "Cannot find run-hidden.vbs next to this installer." }
 
 $pwsh = (Get-Process -Id $PID).Path   # the pwsh that's running this installer
 $argList = "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptPath`" -ConfigPath `"$ConfigPath`""
 
-$action    = New-ScheduledTaskAction -Execute $pwsh -Argument $argList
+# Launch through wscript + run-hidden.vbs so no console window ever appears. With Windows
+# Terminal as the default console host, pwsh -WindowStyle Hidden alone leaves a visible
+# Terminal window. The launcher waits for pwsh and returns its exit code, so the task stays
+# Running and the restart-on-failure settings below still apply.
+$wscript = Join-Path $env:SystemRoot 'System32\wscript.exe'
+$action    = New-ScheduledTaskAction -Execute $wscript -Argument "//B //NoLogo `"$launcher`" `"$pwsh`" $argList"
 $trigger   = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
 $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel Limited
 $settings  = New-ScheduledTaskSettingsSet `

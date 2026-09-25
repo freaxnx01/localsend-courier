@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- The sender no longer leaves a visible console window. With Windows Terminal as the
+  default console host, `pwsh -WindowStyle Hidden` still opened a Terminal window, so
+  `Install-Sender.ps1` now registers the task through `wscript.exe` and the new
+  `sender/run-hidden.vbs` launcher, which starts `pwsh` hidden and waits for it.
+  Existing installs: re-run `Install-Sender.ps1`. Note that `Stop-ScheduledTask` now
+  ends only `wscript.exe`. Stop the sender's `pwsh` process as well before restarting,
+  or two senders run side by side.
+- `Install-Sender.ps1` stores `-ConfigPath` as an absolute path. A relative path such
+  as `.\config.json` did not resolve, because the task starts without a working directory.
+
 ### Changed
 
 - Project renamed from `screenpresso-localsend` to `localsend-courier`. The
