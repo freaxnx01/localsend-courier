@@ -804,3 +804,5 @@ while ($true) {
     }
     Start-Sleep -Seconds $cfg.pollIntervalSeconds
 }
+# Held since startup to keep other instances out; release it so a waiting one starts at once.
+$instanceMutex.ReleaseMutex()
