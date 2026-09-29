@@ -41,7 +41,7 @@ function Get-DefaultConfig {
         https                 = $true
         watchFolder           = ''
         fileExtensions        = @('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.mp4', '.log')
-        clipboard             = 'name'   # name | path | none
+        clipboard             = 'name'   # name | path | image+name | none
         localSendCli          = 'localsend-cli'
         deleteMarkerSuffix    = '.localsend-delete'
         pollIntervalSeconds   = 2
@@ -256,12 +256,75 @@ function Set-ClipboardValue {
         default { $value = $File.Name }
     }
     try {
+        if ($Cfg.clipboard -eq 'image+name' -and $script:ClipboardImageExtensions -contains $File.Extension.ToLowerInvariant()) {
+            Set-ClipboardImageAndText -File $File -Text $value
+            Write-Log "Clipboard <- image + $value"
+            return
+        }
         Set-Clipboard -Value $value
         Write-Log "Clipboard <- $value"
     } catch {
         Write-Log "Failed to set clipboard: $($_.Exception.Message)" 'WARN'
     }
 }
+
+# Formats System.Drawing can load; anything else (.webp, .mp4, ...) falls back
+# to the plain file name.
+$script:ClipboardImageExtensions = @('.png', '.jpg', '.jpeg', '.gif', '.bmp')
+
+# One clipboard entry carrying the image and the file name, so the capture stays
+# the top entry: image-aware apps paste the picture, text fields the name.
+function Set-ClipboardImageAndText {
+    param([System.IO.FileInfo]$File, [string]$Text)
+    Add-WinFormsType -TypeName 'ClipboardImageWriter' -Source $script:ClipboardImageSource
+    [ClipboardImageWriter]::SetImageAndText($File.FullName, $Text)
+}
+
+# The clipboard needs an STA thread and pwsh 7 is MTA, so the write runs on a
+# short-lived STA thread. The file is read into memory first so it is not
+# locked (the user may delete the capture right after).
+$script:ClipboardImageSource = @'
+using System;
+using System.Drawing;
+using System.IO;
+using System.Threading;
+using System.Windows.Forms;
+
+public static class ClipboardImageWriter
+{
+    public static void SetImageAndText(string imagePath, string text)
+    {
+        Exception error = null;
+        Thread thread = new Thread(delegate ()
+        {
+            try { Write(imagePath, text); }
+            catch (Exception e) { error = e; }
+        });
+        thread.SetApartmentState(ApartmentState.STA);
+        thread.Start();
+        thread.Join();
+        if (error != null) { throw error; }
+    }
+
+    private static void Write(string imagePath, string text)
+    {
+        byte[] bytes = File.ReadAllBytes(imagePath);
+        using (MemoryStream stream = new MemoryStream(bytes))
+        using (Image image = Image.FromStream(stream))
+        using (Bitmap bitmap = new Bitmap(image))
+        {
+            DataObject data = new DataObject();
+            data.SetImage(bitmap);
+            if (imagePath.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+            {
+                data.SetData("PNG", false, new MemoryStream(bytes));   // keeps transparency
+            }
+            data.SetText(text);
+            Clipboard.SetDataObject(data, true, 5, 100);   // copy = true: survives this thread
+        }
+    }
+}
+'@
 
 # ---------------------------------------------------------------------------
 # Clipboard-text hotkeys
@@ -490,33 +553,45 @@ public class ClipTextHotkeys
 }
 '@
 
-function Start-ClipboardTextHotkeys {
-    param([pscustomobject]$Cfg)
+# Compiles one of this script's C# types against WinForms, once per process.
+function Add-WinFormsType {
+    param([string]$TypeName, [string]$Source)
 
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
+    if ($TypeName -as [type]) { return }
 
-    if (-not ('ClipTextHotkeys' -as [type])) {
-        # WinForms comes from the loaded assemblies (Message lives in
-        # Windows.Forms.Primitives, not Windows.Forms). The BCL pieces must be
-        # simple names instead: .Assembly.Location resolves those to
-        # System.Private.CoreLib, which the compiler will not accept as the
-        # reference for a forwarded type.
-        $references = @(
-            [System.Windows.Forms.Form].Assembly.Location
-            [System.Windows.Forms.Message].Assembly.Location
-            [System.Drawing.Icon].Assembly.Location
-            [System.Diagnostics.Process].Assembly.Location
-            'System.Runtime'
-            'System.Collections.Concurrent'
-            'System.Threading'
-            'System.Threading.Thread'
-            'System.Text.Encoding.Extensions'
-            'System.ComponentModel.Primitives'
-            'netstandard'
-        )
-        Add-Type -TypeDefinition $script:ClipTextHotkeySource -ReferencedAssemblies $references
-    }
+    # WinForms comes from the loaded assemblies (Message lives in
+    # Windows.Forms.Primitives, not Windows.Forms). The BCL pieces must be
+    # simple names instead: .Assembly.Location resolves those to
+    # System.Private.CoreLib, which the compiler will not accept as the
+    # reference for a forwarded type.
+    $references = @(
+        [System.Windows.Forms.Form].Assembly.Location
+        [System.Windows.Forms.Message].Assembly.Location
+        [System.Drawing.Icon].Assembly.Location
+        [System.Diagnostics.Process].Assembly.Location
+        'System.Runtime'
+        'System.Collections.Concurrent'
+        'System.Threading'
+        'System.Threading.Thread'
+        'System.Text.Encoding.Extensions'
+        'System.ComponentModel.Primitives'
+        'netstandard'
+    )
+    # .NET 9+ splits WinForms/GDI+ internals (System.Private.Windows.Core,
+    # ...GdiPlus) out; Image and Bitmap do not compile without them. Absent on
+    # older runtimes, so take whichever are loaded.
+    $references += [AppDomain]::CurrentDomain.GetAssemblies() |
+        Where-Object { $_.GetName().Name -like 'System.Private.Windows.*' -and $_.Location } |
+        ForEach-Object Location
+    Add-Type -TypeDefinition $Source -ReferencedAssemblies $references
+}
+
+function Start-ClipboardTextHotkeys {
+    param([pscustomobject]$Cfg)
+
+    Add-WinFormsType -TypeName 'ClipTextHotkeys' -Source $script:ClipTextHotkeySource
 
     $settings = $Cfg.clipboardText
     $folder = if ([string]::IsNullOrWhiteSpace($settings.folder)) { $Cfg.watchFolder } else { $settings.folder }

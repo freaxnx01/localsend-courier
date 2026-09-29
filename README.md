@@ -117,7 +117,7 @@ Without systemd you can run the two scripts directly:
 | `https`                | `true`                                    | Use HTTPS transport (must match the receiver). |
 | `watchFolder`          | `""` → `Pictures\Screenpresso`            | Folder to watch. Empty = Screenpresso default. |
 | `fileExtensions`       | png, jpg, jpeg, gif, bmp, webp, mp4, log  | Only files with these extensions are sent. |
-| `clipboard`            | `"name"`                                  | `name` = copy filename, `path` = full path, `none`. |
+| `clipboard`            | `"name"`                                  | `name` = copy filename, `path` = full path, `image+name` = one entry with the image *and* the filename (image apps paste the picture, text fields the name; non-images get the name only), `none`. |
 | `localSendCli`         | `"localsend-cli"`                         | Command or full path to the CLI. |
 | `deleteMarkerSuffix`   | `".localsend-delete"`                     | Suffix for delete-marker files. Must match host. |
 | `pollIntervalSeconds`  | `2`                                       | How often the folder is reconciled. |
