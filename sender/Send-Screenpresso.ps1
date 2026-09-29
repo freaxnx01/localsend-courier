@@ -622,6 +622,33 @@ function Invoke-Reconcile {
 }
 
 # ---------------------------------------------------------------------------
+# Process lifetime
+# ---------------------------------------------------------------------------
+
+# Only one sender may run per session: two would double-send files and fight
+# over the hotkeys. A new instance waits for the old one to exit, which covers
+# Stop-ScheduledTask immediately followed by Start-ScheduledTask.
+function Enter-SingleInstance {
+    param([int]$TimeoutSeconds = 15)
+    $mutex = [System.Threading.Mutex]::new($false, 'Local\localsend-courier-sender')
+    try {
+        if ($mutex.WaitOne([TimeSpan]::FromSeconds($TimeoutSeconds))) { return $mutex }
+    } catch [System.Threading.AbandonedMutexException] {
+        return $mutex   # the previous owner was killed; the mutex is ours now
+    }
+    $mutex.Dispose()
+    throw "Another sender is still running after ${TimeoutSeconds}s; exiting."
+}
+
+# Stop-ScheduledTask ends only the task's own process. When that is wscript
+# running run-hidden.vbs, this pwsh would outlive it, so track the launcher.
+function Get-HiddenLauncher {
+    $parent = (Get-Process -Id $PID).Parent
+    if ($parent -and $parent.ProcessName -eq 'wscript') { return $parent }
+    return $null
+}
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -631,6 +658,14 @@ if (-not (Test-Path -LiteralPath $dataDir)) { New-Item -ItemType Directory -Path
 $script:LogFile = $cfg.logFile
 
 $cliPath = Assert-Cli -Cli $cfg.localSendCli
+
+try {
+    $instanceMutex = Enter-SingleInstance
+} catch {
+    Write-Log $_.Exception.Message 'ERROR'
+    exit 1
+}
+$launcher = Get-HiddenLauncher
 
 Write-Log "localsend-courier sender starting"
 Write-Log "  watch folder : $((Get-WatchedFolders -Cfg $cfg) -join ' | ')"
@@ -678,6 +713,10 @@ if ($Once) {
 
 Write-Log "Watching (poll every $($cfg.pollIntervalSeconds)s). Ctrl+C to stop."
 while ($true) {
+    if ($launcher -and $launcher.HasExited) {
+        Write-Log "Launcher (wscript) has exited; stopping."
+        break
+    }
     try {
         if ($hotkeys) { Sync-HotkeyQueues -Hotkeys $hotkeys -SuppressClipboard $suppressClipboard }
         if (Invoke-Reconcile -Cfg $cfg -State $state -SuppressClipboard $suppressClipboard) { Save-State -State $state -Path $cfg.stateFile }
