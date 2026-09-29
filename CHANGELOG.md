@@ -37,6 +37,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `clipboard: "image+name"` sender option: after a send, the clipboard gets one
+  entry holding both the capture and its filename, instead of the filename
+  replacing the capture. The screenshot stays the top entry in clipboard
+  managers such as Ditto; image-aware apps paste the picture, text fields the
+  name. Files System.Drawing cannot load (webp, mp4, log) get the name only.
 - Clipboard-text hotkeys in the sender (`clipboardText` config block, off by
   default): save the clipboard's text to `console-<stamp>.log` and put either the
   Windows path or the host path back on the clipboard, plus a hotkey to open the
