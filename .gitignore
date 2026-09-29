@@ -12,3 +12,6 @@ Thumbs.db
 
 # Local session/handoff state
 .claude/
+
+# Git worktrees (project-local)
+.worktrees/
