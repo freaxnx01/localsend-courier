@@ -55,6 +55,10 @@ pwsh -NoProfile -File .\sender\Install-Sender.ps1 -Unregister
 
 Config changes need a restart: `Stop-ScheduledTask` then `Start-ScheduledTask`.
 
+After `git pull`: re-run `Install-Sender.ps1`, then restart. The task keeps the
+command line it was registered with, so a changed launch (e.g. the hidden
+`run-hidden.vbs` launcher) only applies once the task is re-registered.
+
 ## Host commands
 
 ```bash
