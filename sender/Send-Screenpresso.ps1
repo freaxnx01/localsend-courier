@@ -353,6 +353,10 @@ public class ClipTextHotkeys
         _trayTimer = new System.Windows.Forms.Timer();
         _trayTimer.Interval = 6000;
         _trayTimer.Tick += delegate { _trayTimer.Stop(); _tray.Visible = false; };
+        // Windows shows a generic warning icon in the header of a process's first
+        // balloon. Showing the tray icon once at startup is meant to avoid that.
+        _tray.Visible = true;
+        _trayTimer.Start();
 
         for (int i = 0; i < _specs.Length; i++)
         {

@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- The first clipboard-save notification after the sender starts showed a yellow
+  warning triangle in its header (a Windows fallback for a process's first balloon;
+  later ones show the PowerShell icon). The sender now shows its tray icon once at
+  startup, which is meant to avoid that.
 - The sender no longer leaves a visible console window. With Windows Terminal as the
   default console host, `pwsh -WindowStyle Hidden` still opened a Terminal window, so
   `Install-Sender.ps1` now registers the task through `wscript.exe` and the new
