@@ -12,6 +12,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `extraWatchFolders` sender config key: more folders watched and forwarded
   alongside `watchFolder`. Files already in a newly added folder are sent on the
   next start.
+- `sender/Install-SendTo.ps1` and `sender/move-to-folder.vbs`: an Explorer
+  **Send to** entry that moves files into a watched folder. A plain folder
+  shortcut under Send to copies instead of moving.
 
 ### Fixed
 
