@@ -111,14 +111,39 @@ function Resolve-Config {
         throw "Config error: 'host' is required (target IP or hostname)."
     }
 
-    # Normalize extensions to lower-case with a leading dot.
-    $cfg.fileExtensions = @($cfg.fileExtensions | ForEach-Object {
-        $e = $_.ToString().ToLowerInvariant()
-        if (-not $e.StartsWith('.')) { $e = ".$e" }
-        $e
+    $cfg.fileExtensions = ConvertTo-ExtensionList -Extensions $cfg.fileExtensions
+    $cfg.extraWatchFolders = @($cfg.extraWatchFolders | ForEach-Object {
+        ConvertTo-WatchedFolder -Entry $_ -DefaultExtensions $cfg.fileExtensions
     })
 
     return $cfg
+}
+
+# Normalize extensions to lower-case with a leading dot; '*' matches every file.
+function ConvertTo-ExtensionList {
+    param([object[]]$Extensions)
+    @($Extensions | ForEach-Object {
+        $e = $_.ToString().ToLowerInvariant()
+        if ($e -ne '*' -and -not $e.StartsWith('.')) { $e = ".$e" }
+        $e
+    })
+}
+
+# An extraWatchFolders entry is a path string, or { "path", "fileExtensions" }
+# to override the global extension list for that folder.
+function ConvertTo-WatchedFolder {
+    param([object]$Entry, [string[]]$DefaultExtensions)
+    if ($Entry -is [string]) {
+        return [pscustomobject]@{ path = $Entry; fileExtensions = $DefaultExtensions }
+    }
+    if ([string]::IsNullOrWhiteSpace($Entry.path)) {
+        throw "Config error: every object in 'extraWatchFolders' needs a 'path'."
+    }
+    $extensions = $DefaultExtensions
+    if ($null -ne $Entry.fileExtensions) {
+        $extensions = ConvertTo-ExtensionList -Extensions $Entry.fileExtensions
+    }
+    return [pscustomobject]@{ path = $Entry.path; fileExtensions = $extensions }
 }
 
 # ---------------------------------------------------------------------------
@@ -629,23 +654,29 @@ function Sync-HotkeyQueues {
 
 # The capture folder and any extra folders, plus the clipboard-dump folder when
 # the hotkeys write somewhere else - a dump has to be watched to be sent and
-# delete-mirrored.
+# delete-mirrored. Each entry carries the extensions sent from that folder.
 function Get-WatchedFolders {
     param([pscustomobject]$Cfg)
-    $folders = @($Cfg.watchFolder) + @($Cfg.extraWatchFolders)
+    $folders = @([pscustomobject]@{ path = $Cfg.watchFolder; fileExtensions = $Cfg.fileExtensions }) +
+        @($Cfg.extraWatchFolders)
     if ($Cfg.clipboardText.enabled -and $Cfg.clipboardText.folder -ne $Cfg.watchFolder) {
-        $folders += $Cfg.clipboardText.folder
+        $folders += [pscustomobject]@{ path = $Cfg.clipboardText.folder; fileExtensions = $Cfg.fileExtensions }
     }
     return $folders
+}
+
+function Test-ExtensionAllowed {
+    param([System.IO.FileInfo]$File, [string[]]$Extensions)
+    ($Extensions -contains '*') -or ($Extensions -contains $File.Extension.ToLowerInvariant())
 }
 
 function Get-WatchedFiles {
     param([pscustomobject]$Cfg)
     $map = @{}
     foreach ($folder in Get-WatchedFolders -Cfg $Cfg) {
-        if (-not (Test-Path -LiteralPath $folder)) { continue }
-        Get-ChildItem -LiteralPath $folder -File -ErrorAction SilentlyContinue |
-            Where-Object { $Cfg.fileExtensions -contains $_.Extension.ToLowerInvariant() } |
+        if (-not (Test-Path -LiteralPath $folder.path)) { continue }
+        Get-ChildItem -LiteralPath $folder.path -File -ErrorAction SilentlyContinue |
+            Where-Object { Test-ExtensionAllowed -File $_ -Extensions $folder.fileExtensions } |
             Where-Object { -not $_.Name.EndsWith($Cfg.deleteMarkerSuffix) } |
             ForEach-Object { $map[$_.Name] = $_ }
     }
@@ -749,7 +780,7 @@ try {
 $launcher = Get-HiddenLauncher
 
 Write-Log "localsend-courier sender starting"
-Write-Log "  watch folder : $((Get-WatchedFolders -Cfg $cfg) -join ' | ')"
+Write-Log "  watch folder : $((Get-WatchedFolders -Cfg $cfg).path -join ' | ')"
 Write-Log "  target host  : $($cfg.host):$($cfg.port) (https=$($cfg.https), pin=$([bool]$cfg.pin))"
 Write-Log "  cli          : $cliPath"
 Write-Log "  state file   : $($cfg.stateFile)"
