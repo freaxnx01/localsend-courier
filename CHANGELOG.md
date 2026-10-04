@@ -15,6 +15,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `sender/Install-SendTo.ps1` and `sender/move-to-folder.vbs`: an Explorer
   **Send to** entry that moves files into a watched folder. A plain folder
   shortcut under Send to copies instead of moving.
+- Per-folder `fileExtensions` override: an `extraWatchFolders` entry can be
+  `{ "path": "…", "fileExtensions": ["*"] }`. `"*"` sends every file type.
 
 ### Fixed
 

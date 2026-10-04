@@ -202,8 +202,13 @@ To forward files from anywhere, add a folder to `extraWatchFolders` and a Send t
 entry that **moves** files into it:
 
 ```json
-"extraWatchFolders": ["C:/Users/you/Downloads/_localsend-courier"]
+"extraWatchFolders": [
+  { "path": "C:/Users/you/Downloads/_localsend-courier", "fileExtensions": ["*"] }
+]
 ```
+
+`"fileExtensions": ["*"]` sends every file type from that folder. A plain path
+string instead of the object uses the global `fileExtensions`.
 
 ```powershell
 pwsh -NoProfile -File .\sender\Install-SendTo.ps1 -Folder "$env:USERPROFILE\Downloads\_localsend-courier"
