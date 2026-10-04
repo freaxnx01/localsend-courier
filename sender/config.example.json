@@ -4,6 +4,7 @@
   "pin": "",
   "https": true,
   "watchFolder": "",
+  "extraWatchFolders": [],
   "fileExtensions": [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".mp4", ".log"],
   "clipboard": "name",
   "localSendCli": "localsend-cli",
