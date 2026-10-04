@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- `extraWatchFolders` sender config key: more folders watched and forwarded
+  alongside `watchFolder`. Files already in a newly added folder are sent on the
+  next start.
+
 ### Fixed
 
 - The first clipboard-save notification after the sender starts showed a yellow

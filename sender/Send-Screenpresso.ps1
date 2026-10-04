@@ -40,7 +40,8 @@ function Get-DefaultConfig {
         pin                   = ''
         https                 = $true
         watchFolder           = ''
-        fileExtensions        = @('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.mp4', '.log')
+        extraWatchFolders     = @()
+        fileExtensions       = @('.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp', '.mp4', '.log')
         clipboard             = 'name'   # name | path | image+name | none
         localSendCli          = 'localsend-cli'
         deleteMarkerSuffix    = '.localsend-delete'
@@ -626,11 +627,12 @@ function Sync-HotkeyQueues {
 # Reconcile
 # ---------------------------------------------------------------------------
 
-# The capture folder, plus the clipboard-dump folder when the hotkeys write
-# somewhere else - a dump has to be watched to be sent and delete-mirrored.
+# The capture folder and any extra folders, plus the clipboard-dump folder when
+# the hotkeys write somewhere else - a dump has to be watched to be sent and
+# delete-mirrored.
 function Get-WatchedFolders {
     param([pscustomobject]$Cfg)
-    $folders = @($Cfg.watchFolder)
+    $folders = @($Cfg.watchFolder) + @($Cfg.extraWatchFolders)
     if ($Cfg.clipboardText.enabled -and $Cfg.clipboardText.folder -ne $Cfg.watchFolder) {
         $folders += $Cfg.clipboardText.folder
     }
