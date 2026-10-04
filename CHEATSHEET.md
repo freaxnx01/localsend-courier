@@ -51,7 +51,14 @@ pwsh -NoProfile -File .\sender\Send-Screenpresso.ps1 -Once
 # install / remove the logon task
 pwsh -NoProfile -File .\sender\Install-Sender.ps1
 pwsh -NoProfile -File .\sender\Install-Sender.ps1 -Unregister
+
+# add / remove a "Send to" entry that moves files into a watched folder
+pwsh -NoProfile -File .\sender\Install-SendTo.ps1 -Folder "$env:USERPROFILE\Downloads\_localsend-courier"
+pwsh -NoProfile -File .\sender\Install-SendTo.ps1 -Name _localsend-courier -Unregister
 ```
+
+Send to: right-click → **Show more options** (`Shift+F10`) → **Send to →
+_localsend-courier** moves the file(s) there, and the sender forwards them.
 
 Config changes need a restart: `Stop-ScheduledTask` then `Start-ScheduledTask`.
 

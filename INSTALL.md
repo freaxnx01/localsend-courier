@@ -196,6 +196,23 @@ folder, so it syncs to the host and delete-mirrors like a capture.
 - Add `.log` to `fileExtensions`, or the dumps are written but never sent.
 - A hotkey already owned by another application is reported as a `WARN` at startup and stays inactive; the file sync is unaffected.
 
+### Optional — Explorer "Send to" entry for an extra folder
+
+To forward files from anywhere, add a folder to `extraWatchFolders` and a Send to
+entry that **moves** files into it:
+
+```json
+"extraWatchFolders": ["C:/Users/you/Downloads/_localsend-courier"]
+```
+
+```powershell
+pwsh -NoProfile -File .\sender\Install-SendTo.ps1 -Folder "$env:USERPROFILE\Downloads\_localsend-courier"
+```
+
+Restart the sender after the config change. A plain folder shortcut in
+`shell:sendto` would **copy** instead of move; see the README section
+*Send to — move files into a watched folder*.
+
 ---
 
 ## 5. Verify the installation

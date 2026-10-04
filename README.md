@@ -217,6 +217,30 @@ while the sender is stopped are still reconciled on the next start. Send failure
 are logged and retried on the next poll — nothing is marked done until the CLI
 returns success.
 
+## Send to — move files into a watched folder
+
+To forward an arbitrary file (e.g. from Downloads), move it into a folder the
+sender watches — `watchFolder` or an `extraWatchFolders` entry.
+`Install-SendTo.ps1` adds an Explorer **Send to** entry for that:
+
+```powershell
+pwsh -NoProfile -File .\sender\Install-SendTo.ps1 -Folder "$env:USERPROFILE\Downloads\_localsend-courier"
+# remove with:  pwsh -NoProfile -File .\sender\Install-SendTo.ps1 -Name _localsend-courier -Unregister
+```
+
+Then right-click file(s) → **Show more options** (or `Shift+F10`) → **Send to →
+_localsend-courier**.
+
+Why not just drop a folder shortcut into `shell:sendto`? A folder target under
+Send to always **copies**, even on the same drive — unlike a drag-and-drop,
+which moves. The entry therefore runs `sender/move-to-folder.vbs` through
+`wscript.exe` (no console window), which moves the files. A file whose name
+already exists in the target folder is skipped and listed in a message box;
+nothing is overwritten.
+
+The shortcut points at the scripts in this checkout, so moving the repo means
+re-running the installer.
+
 ## Clipboard-text hotkeys
 
 Optional, **off by default**. When `clipboardText.enabled` is true the sender also
