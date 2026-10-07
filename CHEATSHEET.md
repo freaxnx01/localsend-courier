@@ -66,6 +66,16 @@ After `git pull`: re-run `Install-Sender.ps1`, then restart. The task keeps the
 command line it was registered with, so a changed launch (e.g. the hidden
 `run-hidden.vbs` launcher) only applies once the task is re-registered.
 
+Upgrading from a version before #9 (single instance + stop with the launcher):
+the old sender ignores `Stop-ScheduledTask`, so kill it once before restarting,
+or two senders run side by side:
+
+```powershell
+Stop-ScheduledTask -TaskName 'localsend-courier'
+Get-CimInstance Win32_Process | ? CommandLine -match 'Send-Screenpresso' | % { Stop-Process -Id $_.ProcessId -Force }
+Start-ScheduledTask -TaskName 'localsend-courier'
+```
+
 ## Host commands
 
 ```bash
