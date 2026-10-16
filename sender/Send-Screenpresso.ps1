@@ -58,6 +58,7 @@ function Get-DefaultConfig {
             hotkeyWindowsPath = 'Ctrl+Shift+L'
             hotkeyHostPath    = 'Ctrl+Shift+J'
             hotkeyOpenFolder  = 'Ctrl+Shift+O'
+            hotkeyFileName    = 'Ctrl+Alt+F'
         }
     }
 }
@@ -413,12 +414,13 @@ public class ClipTextHotkeys
     public readonly ManualResetEventSlim Ready = new ManualResetEventSlim(false);
 
     public ClipTextHotkeys(string folder, int minChars, string hostInbox,
-                           string windowsPathKey, string hostPathKey, string openFolderKey)
+                           string windowsPathKey, string hostPathKey, string openFolderKey,
+                           string fileNameKey)
     {
         _folder = folder;
         _minChars = minChars;
         _hostInbox = (hostInbox == null ? "" : hostInbox.TrimEnd('/'));
-        _specs = new string[] { windowsPathKey, hostPathKey, openFolderKey };
+        _specs = new string[] { windowsPathKey, hostPathKey, openFolderKey, fileNameKey };
     }
 
     public void Start()
@@ -473,6 +475,7 @@ public class ClipTextHotkeys
     {
         if (index == 0) { return "save clipboard, Windows path back"; }
         if (index == 1) { return "save clipboard, host path back"; }
+        if (index == 3) { return "save clipboard, file name back"; }
         return "open the folder";
     }
 
@@ -487,7 +490,7 @@ public class ClipTextHotkeys
                 Process.Start(info);
                 return;
             }
-            SaveClipboard(id == 2);
+            SaveClipboard(id);
         }
         catch (Exception ex)
         {
@@ -495,7 +498,7 @@ public class ClipTextHotkeys
         }
     }
 
-    private void SaveClipboard(bool hostPath)
+    private void SaveClipboard(int id)
     {
         string text = Clipboard.ContainsText() ? Clipboard.GetText() : null;
         if (string.IsNullOrWhiteSpace(text))
@@ -519,12 +522,20 @@ public class ClipTextHotkeys
         // "clipboard <- filename" would overwrite the path set just below.
         Created.Enqueue(name);
 
-        string value = hostPath ? _hostInbox + "/" + name : full;
+        string value = ClipboardValue(id, name, full);
         Clipboard.SetText(value);
 
         double kb = Math.Round(new FileInfo(full).Length / 1024.0, 1);
         Notify("Clipboard saved (" + kb + " KB)", value);
         Messages.Enqueue("INFO|Clipboard text -> " + name + " (" + kb + " KB); clipboard <- " + value);
+    }
+
+    // What goes back on the clipboard: 1 = Windows path, 2 = host path, 4 = bare name.
+    private string ClipboardValue(int id, string name, string full)
+    {
+        if (id == 2) { return _hostInbox + "/" + name; }
+        if (id == 4) { return name; }
+        return full;
     }
 
     // The name is second-resolution, so two saves inside the same second would
@@ -624,7 +635,8 @@ function Start-ClipboardTextHotkeys {
 
     $hotkeys = [ClipTextHotkeys]::new(
         $folder, [int]$settings.minChars, $settings.hostInbox,
-        $settings.hotkeyWindowsPath, $settings.hotkeyHostPath, $settings.hotkeyOpenFolder)
+        $settings.hotkeyWindowsPath, $settings.hotkeyHostPath, $settings.hotkeyOpenFolder,
+        $settings.hotkeyFileName)
     $hotkeys.Start()
 
     if (-not $hotkeys.Ready.Wait(5000)) {

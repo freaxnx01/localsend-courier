@@ -186,7 +186,8 @@ folder, so it syncs to the host and delete-mirrors like a capture.
   "hostInbox": "/home/admin/localsend-inbox",
   "hotkeyWindowsPath": "Ctrl+Shift+L",
   "hotkeyHostPath": "Ctrl+Shift+J",
-  "hotkeyOpenFolder": "Ctrl+Shift+O"
+  "hotkeyOpenFolder": "Ctrl+Shift+O",
+  "hotkeyFileName": "Ctrl+Alt+F"
 }
 ```
 

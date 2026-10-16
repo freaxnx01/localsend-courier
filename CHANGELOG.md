@@ -17,6 +17,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   shortcut under Send to copies instead of moving.
 - Per-folder `fileExtensions` override: an `extraWatchFolders` entry can be
   `{ "path": "…", "fileExtensions": ["*"] }`. `"*"` sends every file type.
+- `clipboardText.hotkeyFileName` (default `Ctrl+Alt+F`): saves the clipboard
+  text like the other save hotkeys, but puts only the file name back on the
+  clipboard.
 
 ### Fixed
 

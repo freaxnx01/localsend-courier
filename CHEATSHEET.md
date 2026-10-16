@@ -11,9 +11,10 @@ under `clipboardText`.
 |---|---|---|
 | `Ctrl+Shift+L` | Saves the clipboard's **text** to `clips\console-<stamp>.log` | Windows path, e.g. `C:\Users\…\clips\console-20260923-115549.log` |
 | `Ctrl+Shift+J` | Same file | **Host** path, e.g. `/home/admin/localsend-inbox/console-20260923-115549.log` |
+| `Ctrl+Alt+F` | Same file | Just the **file name**, e.g. `console-20260923-115549.log` |
 | `Ctrl+Shift+O` | Opens the dump folder in Explorer | unchanged |
 
-Either save also **sends** the file to the host and mirrors a later local delete.
+Every save also **sends** the file to the host and mirrors a later local delete.
 
 **Refused, with a notification and nothing written:** an empty or non-text
 clipboard, and anything shorter than `minChars` (default 50).

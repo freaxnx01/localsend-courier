@@ -251,6 +251,7 @@ path back on the clipboard:
 |---|---|---|
 | Save, Windows path back | `Ctrl+Shift+L` | Writes `console-<stamp>.log`, clipboard gets the local path. |
 | Save, host path back    | `Ctrl+Shift+J` | Same file, clipboard gets `<hostInbox>/<name>` — the path it will have on the host. |
+| Save, file name back    | `Ctrl+Alt+F`   | Same file, clipboard gets just the file name, e.g. `console-20261007-130950.log`. |
 | Open the folder         | `Ctrl+Shift+O` | Opens the folder in Explorer. |
 
 Dumps are written to their own folder (`%LOCALAPPDATA%\localsend-courier\clips`
