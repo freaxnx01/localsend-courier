@@ -39,6 +39,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Both clipboard-text save hotkeys (`Ctrl+Shift+L`, `Ctrl+Shift+J`) now put only
+  the file name back on the clipboard, e.g. `console-20261007-130950.log`,
+  instead of the Windows or host path. `clipboardText.hostInbox` is gone; an
+  old `config.json` that still sets it is ignored.
+
 - Project renamed from `screenpresso-localsend` to `localsend-courier`. The
   scheduled task, the `%LOCALAPPDATA%` data directory and the host systemd units
   (`localsend-courier-receiver.service`, `localsend-courier-delete-watcher.service`)

@@ -18,7 +18,6 @@
     "enabled": false,
     "folder": "",
     "minChars": 50,
-    "hostInbox": "/home/admin/localsend-inbox",
     "hotkeyWindowsPath": "Ctrl+Shift+L",
     "hotkeyHostPath": "Ctrl+Shift+J",
     "hotkeyOpenFolder": "Ctrl+Shift+O"

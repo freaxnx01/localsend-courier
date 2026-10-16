@@ -54,7 +54,6 @@ function Get-DefaultConfig {
             enabled           = $false
             folder            = ''   # empty = <dataDir>\clips, which is watched too
             minChars          = 50
-            hostInbox         = '/home/admin/localsend-inbox'
             hotkeyWindowsPath = 'Ctrl+Shift+L'
             hotkeyHostPath    = 'Ctrl+Shift+J'
             hotkeyOpenFolder  = 'Ctrl+Shift+O'
@@ -402,7 +401,6 @@ public class ClipTextHotkeys
 
     private readonly string _folder;
     private readonly int _minChars;
-    private readonly string _hostInbox;
     private readonly string[] _specs;
     private MessageWindow _window;
     private NotifyIcon _tray;
@@ -412,12 +410,11 @@ public class ClipTextHotkeys
     public readonly ConcurrentQueue<string> Messages = new ConcurrentQueue<string>();
     public readonly ManualResetEventSlim Ready = new ManualResetEventSlim(false);
 
-    public ClipTextHotkeys(string folder, int minChars, string hostInbox,
+    public ClipTextHotkeys(string folder, int minChars,
                            string windowsPathKey, string hostPathKey, string openFolderKey)
     {
         _folder = folder;
         _minChars = minChars;
-        _hostInbox = (hostInbox == null ? "" : hostInbox.TrimEnd('/'));
         _specs = new string[] { windowsPathKey, hostPathKey, openFolderKey };
     }
 
@@ -471,8 +468,7 @@ public class ClipTextHotkeys
 
     private static string Describe(int index)
     {
-        if (index == 0) { return "save clipboard, Windows path back"; }
-        if (index == 1) { return "save clipboard, host path back"; }
+        if (index < 2) { return "save clipboard, file name back"; }
         return "open the folder";
     }
 
@@ -487,7 +483,7 @@ public class ClipTextHotkeys
                 Process.Start(info);
                 return;
             }
-            SaveClipboard(id == 2);
+            SaveClipboard();
         }
         catch (Exception ex)
         {
@@ -495,7 +491,7 @@ public class ClipTextHotkeys
         }
     }
 
-    private void SaveClipboard(bool hostPath)
+    private void SaveClipboard()
     {
         string text = Clipboard.ContainsText() ? Clipboard.GetText() : null;
         if (string.IsNullOrWhiteSpace(text))
@@ -516,15 +512,14 @@ public class ClipTextHotkeys
 
         // Enqueue BEFORE touching the clipboard: the reconciler has to know this
         // file is hotkey-made before it can pick it up, or its own
-        // "clipboard <- filename" would overwrite the path set just below.
+        // "clipboard <- filename" would race the name set just below.
         Created.Enqueue(name);
 
-        string value = hostPath ? _hostInbox + "/" + name : full;
-        Clipboard.SetText(value);
+        Clipboard.SetText(name);
 
         double kb = Math.Round(new FileInfo(full).Length / 1024.0, 1);
-        Notify("Clipboard saved (" + kb + " KB)", value);
-        Messages.Enqueue("INFO|Clipboard text -> " + name + " (" + kb + " KB); clipboard <- " + value);
+        Notify("Clipboard saved (" + kb + " KB)", name);
+        Messages.Enqueue("INFO|Clipboard text -> " + name + " (" + kb + " KB); clipboard <- " + name);
     }
 
     // The name is second-resolution, so two saves inside the same second would
@@ -623,7 +618,7 @@ function Start-ClipboardTextHotkeys {
     $folder = if ([string]::IsNullOrWhiteSpace($settings.folder)) { $Cfg.watchFolder } else { $settings.folder }
 
     $hotkeys = [ClipTextHotkeys]::new(
-        $folder, [int]$settings.minChars, $settings.hostInbox,
+        $folder, [int]$settings.minChars,
         $settings.hotkeyWindowsPath, $settings.hotkeyHostPath, $settings.hotkeyOpenFolder)
     $hotkeys.Start()
 
