@@ -244,13 +244,13 @@ re-running the installer.
 ## Clipboard-text hotkeys
 
 Optional, **off by default**. When `clipboardText.enabled` is true the sender also
-registers global hotkeys that write the clipboard's *text* into a file and put a
-path back on the clipboard:
+registers global hotkeys that write the clipboard's *text* into a file and put the
+file name back on the clipboard:
 
 | Hotkey | Default | Effect |
 |---|---|---|
-| Save, Windows path back | `Ctrl+Shift+L` | Writes `console-<stamp>.log`, clipboard gets the local path. |
-| Save, host path back    | `Ctrl+Shift+J` | Same file, clipboard gets `<hostInbox>/<name>` — the path it will have on the host. |
+| Save, file name back    | `Ctrl+Shift+L` | Writes `console-<stamp>.log`, clipboard gets the file name, e.g. `console-20261007-130950.log`. |
+| Save, file name back    | `Ctrl+Shift+J` | Same as `Ctrl+Shift+L`. |
 | Open the folder         | `Ctrl+Shift+O` | Opens the folder in Explorer. |
 
 Dumps are written to their own folder (`%LOCALAPPDATA%\localsend-courier\clips`

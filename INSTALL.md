@@ -174,7 +174,7 @@ LOCALSEND_CLI="localsend-cli"
 ### Optional — clipboard-text hotkeys
 
 Off by default. When enabled, the sender also registers global hotkeys that save
-the clipboard's **text** to a file and put a path back on the clipboard. The file
+the clipboard's **text** to a file and put its file name back on the clipboard. The file
 goes into its own folder, which the sender watches in addition to the capture
 folder, so it syncs to the host and delete-mirrors like a capture.
 
@@ -183,7 +183,6 @@ folder, so it syncs to the host and delete-mirrors like a capture.
   "enabled": true,
   "folder": "",
   "minChars": 50,
-  "hostInbox": "/home/admin/localsend-inbox",
   "hotkeyWindowsPath": "Ctrl+Shift+L",
   "hotkeyHostPath": "Ctrl+Shift+J",
   "hotkeyOpenFolder": "Ctrl+Shift+O"
@@ -191,7 +190,6 @@ folder, so it syncs to the host and delete-mirrors like a capture.
 ```
 
 - `folder` empty = `%LOCALAPPDATA%\localsend-courier\clips`, watched alongside the capture folder. Do **not** point it at a OneDrive Files On-Demand folder: such a folder accepts writes from the capturing app but rejects file creation by other processes, and every save fails with `Could not find file`.
-- `hostInbox` is only used to build the path string for `hotkeyHostPath`; it is not verified against the host.
 - `minChars` refuses accidental short clipboards.
 - Add `.log` to `fileExtensions`, or the dumps are written but never sent.
 - A hotkey already owned by another application is reported as a `WARN` at startup and stays inactive; the file sync is unaffected.

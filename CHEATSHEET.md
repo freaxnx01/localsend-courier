@@ -9,8 +9,8 @@ under `clipboardText`.
 
 | Shortcut | Does | Clipboard afterwards |
 |---|---|---|
-| `Ctrl+Shift+L` | Saves the clipboard's **text** to `clips\console-<stamp>.log` | Windows path, e.g. `C:\Users\…\clips\console-20260923-115549.log` |
-| `Ctrl+Shift+J` | Same file | **Host** path, e.g. `/home/admin/localsend-inbox/console-20260923-115549.log` |
+| `Ctrl+Shift+L` | Saves the clipboard's **text** to `clips\console-<stamp>.log` | File name only, e.g. `console-20260923-115549.log` |
+| `Ctrl+Shift+J` | Same as `Ctrl+Shift+L` | File name only |
 | `Ctrl+Shift+O` | Opens the dump folder in Explorer | unchanged |
 
 Either save also **sends** the file to the host and mirrors a later local delete.
@@ -96,7 +96,7 @@ touch ~/localsend-inbox/<name>.localsend-delete
 | `hotkey      : Ctrl+Shift+L - …` | Registered at startup. A `WARN` here means another app owns it. |
 | `Sending new file: X` | Picked up and being sent. |
 | `Clipboard <- X` | Filename copied after a successful send. |
-| `Clipboard text -> X; clipboard <- …` | A hotkey save. No `Clipboard <- X` follows — the path is left alone on purpose. |
+| `Clipboard text -> X; clipboard <- …` | A hotkey save. No `Clipboard <- X` follows — the name is already set. |
 | `Local delete detected: X` | Marker sent; the host deletes its copy. |
 | `watch folder : A \| B` | Both watched folders — captures and dumps. |
 
